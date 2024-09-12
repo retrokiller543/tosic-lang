@@ -5,6 +5,12 @@ use std::str::FromStr;
 pub enum Token {
     LeftParen,
     RightParen,
+    LeftBrace,
+    RightBrace,
+    Star,
+    Dot,
+    Comma,
+    Plus,
     EOF
 }
 
@@ -13,6 +19,12 @@ impl Display for Token {
         match self {
             Token::LeftParen => write!(f, "LEFT_PAREN ( null"),
             Token::RightParen => write!(f, "RIGHT_PAREN ) null"),
+            Token::LeftBrace => write!(f, "LEFT_BRACE {{ null"),
+            Token::RightBrace => write!(f, "RIGHT_BRACE }} null"),
+            Token::Star => write!(f, "STAR * null"),
+            Token::Dot => write!(f, "DOT . null"),
+            Token::Comma => write!(f, "COMMA , null"),
+            Token::Plus => write!(f, "PLUS + null"),
             Token::EOF => write!(f, "EOF  null"),
         }
     }
@@ -25,6 +37,12 @@ impl FromStr for Token {
         match s {
             "(" => Ok(Token::LeftParen),
             ")" => Ok(Token::RightParen),
+            "{" => Ok(Token::LeftBrace),
+            "}" => Ok(Token::RightBrace),
+            "*" => Ok(Token::Star),
+            "." => Ok(Token::Dot),
+            "," => Ok(Token::Comma),
+            "+" => Ok(Token::Plus),
             _ => Ok(Token::EOF),
         }
     }
