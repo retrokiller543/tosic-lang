@@ -1,8 +1,10 @@
 mod error;
-pub mod tokenizer;
+pub mod token;
+mod lexer;
 
 use std::env;
 use std::fs;
+use std::process::exit;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -22,11 +24,10 @@ fn main() {
             });
 
             if !file_contents.is_empty() {
-                let tokens = tokenizer::tokenize(file_contents);
-
-                for token in tokens {
-                    println!("{}", token);
-                }
+                let _ = match lexer::Lexer::lex(file_contents) {
+                    Ok(_) => (),
+                    Err(_) => exit(65),
+                };
             } else {
                 println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
             }

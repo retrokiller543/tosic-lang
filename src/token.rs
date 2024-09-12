@@ -61,27 +61,3 @@ impl FromStr for Token {
         }
     }
 }
-
-pub fn tokenize(code: String) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    let lines = code.lines();
-
-    for (i, line) in lines.enumerate() {
-        let chars = line.chars();
-
-        for c in chars {
-            if c.is_whitespace() {
-                continue;
-            }
-
-            match Token::from_string(&c.to_string(), i + 1) {
-                Ok(token) => tokens.push(token),
-                Err(err) => eprintln!("{}", err),
-            }
-        }
-    }
-
-    tokens.push(Token::EOF);
-
-    tokens
-}
