@@ -1,3 +1,4 @@
+use crate::error::TokenError;
 use std::fmt::Display;
 use std::str::FromStr;
 
@@ -13,7 +14,14 @@ pub enum Token {
     Plus,
     Minus,
     Semicolon,
-    EOF
+    EOF,
+}
+
+impl Token {
+    pub fn from_string(s: &str, line: usize) -> Result<Self, TokenError> {
+        s.parse()
+            .map_err(|_| TokenError::InvalidToken(s.to_string(), line))
+    }
 }
 
 impl Display for Token {
@@ -35,7 +43,7 @@ impl Display for Token {
 }
 
 impl FromStr for Token {
-    type Err = String;
+    type Err = TokenError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -49,21 +57,28 @@ impl FromStr for Token {
             "+" => Ok(Token::Plus),
             "-" => Ok(Token::Minus),
             ";" => Ok(Token::Semicolon),
-            _ => Ok(Token::EOF),
+            token => Err(TokenError::InvalidToken(token.to_string(), 0)),
         }
     }
 }
 
 pub fn tokenize(code: String) -> Vec<Token> {
-    let mut tokens: Vec<Token> = Vec::new();
-    let mut chars = code.chars();
+    let mut tokens = Vec::new();
+    let lines = code.lines();
 
-    while let Some(c) = chars.next() {
-        if c == ' ' || c == '\n' || c == '\t' {
-            continue;
+    for (i, line) in lines.enumerate() {
+        let chars = line.chars();
+
+        for c in chars {
+            if c.is_whitespace() {
+                continue;
+            }
+
+            match Token::from_string(&c.to_string(), i + 1) {
+                Ok(token) => tokens.push(token),
+                Err(err) => eprintln!("{}", err),
+            }
         }
-
-        tokens.push(Token::from_str(&c.to_string()).unwrap());
     }
 
     tokens.push(Token::EOF);
