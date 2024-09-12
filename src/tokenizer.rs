@@ -11,6 +11,8 @@ pub enum Token {
     Dot,
     Comma,
     Plus,
+    Minus,
+    Semicolon,
     EOF
 }
 
@@ -25,6 +27,8 @@ impl Display for Token {
             Token::Dot => write!(f, "DOT . null"),
             Token::Comma => write!(f, "COMMA , null"),
             Token::Plus => write!(f, "PLUS + null"),
+            Token::Minus => write!(f, "MINUS - null"),
+            Token::Semicolon => write!(f, "SEMICOLON ; null"),
             Token::EOF => write!(f, "EOF  null"),
         }
     }
@@ -43,6 +47,8 @@ impl FromStr for Token {
             "." => Ok(Token::Dot),
             "," => Ok(Token::Comma),
             "+" => Ok(Token::Plus),
+            "-" => Ok(Token::Minus),
+            ";" => Ok(Token::Semicolon),
             _ => Ok(Token::EOF),
         }
     }
