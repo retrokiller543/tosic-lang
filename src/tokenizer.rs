@@ -13,7 +13,7 @@ impl Display for Token {
         match self {
             Token::LeftParen => write!(f, "LEFT_PAREN ( null"),
             Token::RightParen => write!(f, "RIGHT_PAREN ) null"),
-            Token::EOF => write!(f, "EOF null"),
+            Token::EOF => write!(f, "EOF  null"),
         }
     }
 }
