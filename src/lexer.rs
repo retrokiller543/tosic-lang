@@ -52,13 +52,26 @@ impl Lexer {
 
                 if c == '"' {
                     let mut s = String::new();
+                    let mut should_include = true;
+
                     while let Some(c) = chars.next() {
                         if c == '"' {
                             break;
                         }
+
                         s.push(c);
+
+                        if chars.peek() == None {
+                            invalid_tokens = true;
+                            should_include = false;
+                            break;
+                        }
                     }
-                    tokens.push(Token::LitStr(s));
+
+                    if should_include {
+                        tokens.push(Token::LitStr(s));
+                    }
+
                     continue;
                 }
 
