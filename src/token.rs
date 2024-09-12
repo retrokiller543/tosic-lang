@@ -19,6 +19,10 @@ pub enum Token {
     Bang,
     BangEqual,
     Semicolon,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
     EOF,
 }
 
@@ -46,6 +50,10 @@ impl Display for Token {
             Token::EqualEqual => write!(f, "EQUAL_EQUAL == null"),
             Token::Bang => write!(f, "BANG ! null"),
             Token::BangEqual => write!(f, "BANG_EQUAL != null"),
+            Token::Less => write!(f, "LESS < null"),
+            Token::LessEqual => write!(f, "LESS_EQUAL <= null"),
+            Token::Greater => write!(f, "GREATER > null"),
+            Token::GreaterEqual => write!(f, "GREATER_EQUAL >= null"),
             Token::Semicolon => write!(f, "SEMICOLON ; null"),
             Token::EOF => write!(f, "EOF  null"),
         }
@@ -70,6 +78,8 @@ impl FromStr for Token {
             "/" => Ok(Token::Slash),
             "=" => Ok(Token::Equal),
             "!" => Ok(Token::Bang),
+            "<" => Ok(Token::Less),
+            ">" => Ok(Token::Greater),
             token => Err(TokenError::InvalidToken(token.to_string(), 0)),
         }
     }

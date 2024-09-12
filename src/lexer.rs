@@ -28,6 +28,28 @@ impl Lexer {
                     continue;
                 }
 
+                if c == '<' && chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::LessEqual);
+                    continue;
+                }
+
+                if c == '>' && chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::GreaterEqual);
+                    continue;
+                }
+
+                if c == '/' && chars.peek() == Some(&'/') {
+                    chars.next();
+                    while let Some(c) = chars.next() {
+                        if c == '\n' {
+                            break;
+                        }
+                    }
+                    continue;
+                }
+
                 match Token::from_string(&c.to_string(), i + 1) {
                     Ok(token) => tokens.push(token),
                     Err(err) => {
