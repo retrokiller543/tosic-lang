@@ -1,3 +1,5 @@
+pub mod tokenizer;
+
 use std::env;
 use std::fs;
 use std::io::{self, Write};
@@ -20,7 +22,11 @@ fn main() {
             });
 
             if !file_contents.is_empty() {
-                panic!("Scanner not implemented");
+                let tokens = tokenizer::tokenize(file_contents);
+
+                for token in tokens {
+                    println!("{}", token);
+                }
             } else {
                 println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
             }
