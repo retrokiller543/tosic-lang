@@ -1,3 +1,4 @@
+use crate::error::TokenError;
 use crate::token::Token;
 
 pub struct Lexer;
@@ -70,6 +71,9 @@ impl Lexer {
 
                     if should_include {
                         tokens.push(Token::LitStr(s));
+                    } else {
+                        let err = TokenError::UnterminatedString(i + 1);
+                        eprintln!("{}", err);
                     }
 
                     continue;
