@@ -50,6 +50,35 @@ impl Lexer {
                     continue;
                 }
 
+                if c == '"' {
+                    let mut s = String::new();
+                    while let Some(c) = chars.next() {
+                        if c == '"' {
+                            break;
+                        }
+                        s.push(c);
+                    }
+                    tokens.push(Token::LitStr(s));
+                    continue;
+                }
+
+                if c.is_ascii_digit() {
+                    let mut s = String::new();
+                    s.push(c);
+
+                    while let Some(c) = chars.next() {
+                        if c.is_ascii_digit() || c == '.' {
+                            s.push(c);
+                        } else {
+                            break;
+                        }
+                    }
+
+                    tokens.push(Token::LitNum(s.parse()?));
+
+                    continue;
+                }
+
                 match Token::from_string(&c.to_string(), i + 1) {
                     Ok(token) => tokens.push(token),
                     Err(err) => {
@@ -77,3 +106,4 @@ impl Lexer {
         }
     }
 }
+

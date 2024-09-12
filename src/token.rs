@@ -23,6 +23,8 @@ pub enum Token {
     LessEqual,
     Greater,
     GreaterEqual,
+    LitStr(String),
+    LitNum(f64),
     EOF,
 }
 
@@ -55,10 +57,22 @@ impl Display for Token {
             Token::Greater => write!(f, "GREATER > null"),
             Token::GreaterEqual => write!(f, "GREATER_EQUAL >= null"),
             Token::Semicolon => write!(f, "SEMICOLON ; null"),
+            Token::LitStr(s) => write!(f, "STRING \"{}\" {}", s, s),
+            Token::LitNum(n) => {
+                let a = n.to_string();
+                if a.ends_with(".0") {
+                    write!(f, "NUMBER {} {}", a.replace(".0", ""), a)
+                } else if !a.contains(".") {
+                    write!(f, "NUMBER {} {}.0", a, a)
+                } else {
+                    write!(f, "NUMBER {} {}", a, a)
+                }
+            },
             Token::EOF => write!(f, "EOF  null"),
         }
     }
 }
+
 
 impl FromStr for Token {
     type Err = TokenError;
