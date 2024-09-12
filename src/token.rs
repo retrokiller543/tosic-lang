@@ -16,6 +16,8 @@ pub enum Token {
     Slash,
     Equal,
     EqualEqual,
+    Bang,
+    BangEqual,
     Semicolon,
     EOF,
 }
@@ -42,6 +44,8 @@ impl Display for Token {
             Token::Slash => write!(f, "SLASH / null"),
             Token::Equal => write!(f, "EQUAL = null"),
             Token::EqualEqual => write!(f, "EQUAL_EQUAL == null"),
+            Token::Bang => write!(f, "BANG ! null"),
+            Token::BangEqual => write!(f, "BANG_EQUAL != null"),
             Token::Semicolon => write!(f, "SEMICOLON ; null"),
             Token::EOF => write!(f, "EOF  null"),
         }
@@ -65,6 +69,7 @@ impl FromStr for Token {
             ";" => Ok(Token::Semicolon),
             "/" => Ok(Token::Slash),
             "=" => Ok(Token::Equal),
+            "!" => Ok(Token::Bang),
             token => Err(TokenError::InvalidToken(token.to_string(), 0)),
         }
     }

@@ -22,6 +22,12 @@ impl Lexer {
                     continue;
                 }
 
+                if c == '!' && chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::BangEqual);
+                    continue;
+                }
+
                 match Token::from_string(&c.to_string(), i + 1) {
                     Ok(token) => tokens.push(token),
                     Err(err) => {
