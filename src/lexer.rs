@@ -9,10 +9,16 @@ impl Lexer {
         let mut invalid_tokens = false;
 
         for (i, line) in lines.enumerate() {
-            let chars = line.chars();
+            let mut chars = line.chars().peekable();
 
-            for c in chars {
+            while let Some(c) = chars.next() {
                 if c.is_whitespace() {
+                    continue;
+                }
+
+                if c == '=' && chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::EqualEqual);
                     continue;
                 }
 

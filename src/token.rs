@@ -13,6 +13,9 @@ pub enum Token {
     Comma,
     Plus,
     Minus,
+    Slash,
+    Equal,
+    EqualEqual,
     Semicolon,
     EOF,
 }
@@ -36,6 +39,9 @@ impl Display for Token {
             Token::Comma => write!(f, "COMMA , null"),
             Token::Plus => write!(f, "PLUS + null"),
             Token::Minus => write!(f, "MINUS - null"),
+            Token::Slash => write!(f, "SLASH / null"),
+            Token::Equal => write!(f, "EQUAL = null"),
+            Token::EqualEqual => write!(f, "EQUAL_EQUAL == null"),
             Token::Semicolon => write!(f, "SEMICOLON ; null"),
             Token::EOF => write!(f, "EOF  null"),
         }
@@ -57,6 +63,8 @@ impl FromStr for Token {
             "+" => Ok(Token::Plus),
             "-" => Ok(Token::Minus),
             ";" => Ok(Token::Semicolon),
+            "/" => Ok(Token::Slash),
+            "=" => Ok(Token::Equal),
             token => Err(TokenError::InvalidToken(token.to_string(), 0)),
         }
     }
