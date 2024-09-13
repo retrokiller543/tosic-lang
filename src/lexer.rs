@@ -88,10 +88,11 @@ impl<'a> Lexer<'a> {
                 }
                 '"' => return self.lex_string(),
                 c if c.is_ascii_digit() => return self.lex_number(),
+                c if c.is_alphabetic() || c == '_' => return self.lex_identifier(),
                 _ => {
                     self.chars.next();
                     return Err(TokenError::InvalidToken(c.to_string(), self.current_line).into());
-                }
+                },
             }
         }
 
@@ -142,6 +143,21 @@ impl<'a> Lexer<'a> {
         }
 
         Ok(Token::LitNum(s))
+    }
+
+    fn lex_identifier(&mut self) -> Result<Token<'a>> {
+        let mut s = String::new();
+
+        while let Some(&c) = self.chars.peek() {
+            if c.is_alphabetic() || c == '_' {
+                s.push(c);
+                self.chars.next();
+            } else {
+                break;
+            }
+        }
+
+        Ok(Token::Ident(Cow::Owned(s)))
     }
 }
 

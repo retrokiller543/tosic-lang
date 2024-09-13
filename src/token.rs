@@ -24,6 +24,7 @@ pub enum Token<'a> {
     GreaterEqual,
     LitStr(Cow<'a, str>),
     LitNum(String),
+    Ident(Cow<'a, str>),
     EOF,
 }
 
@@ -58,7 +59,8 @@ impl<'a> Display for Token<'a> {
                 } else {
                     write!(f, "NUMBER {} {}", n, trim_trailing_zeroes(n))
                 }
-            }
+            },
+            Token::Ident(s) => write!(f, "IDENTIFIER {} null", s),
             Token::EOF => write!(f, "EOF  null"),
         }
     }
