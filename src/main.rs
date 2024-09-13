@@ -1,7 +1,7 @@
 mod error;
 mod lexer;
-pub mod token;
 mod parser;
+pub mod token;
 
 use crate::lexer::Lexer;
 use std::env;
@@ -35,7 +35,7 @@ fn main() {
                         Err(err) => {
                             eprintln!("{}", err);
                             has_errors = true;
-                        },
+                        }
                     }
                 }
 
@@ -47,7 +47,7 @@ fn main() {
             } else {
                 println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
             }
-        },
+        }
         "parse" => {
             let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
                 eprintln!("Failed to read file {}", filename);
@@ -68,6 +68,7 @@ fn main() {
             };
 
             let mut parser = parser::Parser::new(tokens);
+
             parser.parse();
 
             if has_lexer_error {

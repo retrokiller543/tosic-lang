@@ -1,4 +1,3 @@
-use crate::lexer::Lexer;
 use crate::token::Token;
 
 pub struct Parser<'a> {
@@ -7,9 +6,7 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn new(tokens: Vec<Token<'a>>) -> Self {
-        Self {
-            tokens,
-        }
+        Self { tokens }
     }
 
     pub fn parse(&mut self) {
@@ -18,7 +15,7 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            println!("{:?}", token);
+            println!("{}", token);
         }
     }
 }

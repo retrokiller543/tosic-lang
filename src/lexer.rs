@@ -28,7 +28,7 @@ impl<'a> Lexer<'a> {
 
                 eprintln!("{}", err);
 
-                continue
+                continue;
             }
 
             tokens.push(token.unwrap());
@@ -116,7 +116,7 @@ impl<'a> Lexer<'a> {
                 _ => {
                     self.chars.next();
                     return Err(TokenError::InvalidToken(c.to_string(), self.current_line).into());
-                },
+                }
             }
         }
 
