@@ -142,7 +142,15 @@ impl<'a> Display for Token<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Token::LitStr(s) => write!(f, "{}", s),
-            Token::LitNum(n) => write!(f, "{}", n),
+            Token::LitNum(n) => {
+                if n.ends_with(".0") {
+                    write!(f, "{}", n)
+                } else if !n.contains(".") {
+                    write!(f, "{}.0", n)
+                } else {
+                    write!(f, "{}", trim_trailing_zeroes(n))
+                }
+            },
             Token::Ident(s) => write!(f, "{}", s),
             Token::Reserved(r) => write!(f, "{}", r),
             Token::EOF => write!(f, "EOF"),
