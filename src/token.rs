@@ -132,7 +132,7 @@ impl<'a> Debug for Token<'a> {
                 }
             },
             Token::Ident(s) => write!(f, "IDENTIFIER {} null", s),
-            Token::Reserved(r) => write!(f, "{}", r),
+            Token::Reserved(r) => write!(f, "{:?}", r),
             Token::EOF => write!(f, "EOF  null"),
         }
     }
