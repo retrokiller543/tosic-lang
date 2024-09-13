@@ -25,14 +25,23 @@ fn main() {
 
             if !file_contents.is_empty() {
                 let lexer = Lexer::new(&file_contents);
+                let mut has_errors = false;
+
                 for token_result in lexer {
                     match token_result {
                         Ok(token) => println!("{}", token),
-                        Err(err) => eprintln!("{}", err),
+                        Err(err) => {
+                            eprintln!("{}", err);
+                            has_errors = true;
+                        },
                     }
                 }
 
                 println!("EOF  null");
+
+                if has_errors {
+                    std::process::exit(65);
+                }
             } else {
                 println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
             }
