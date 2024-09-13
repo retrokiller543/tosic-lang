@@ -1,6 +1,5 @@
 use crate::error::TokenError;
 use crate::token::{Reserved, Token};
-use anyhow::Result;
 use std::borrow::Cow;
 
 pub struct Lexer<'a> {
@@ -19,7 +18,32 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn lex_next(&mut self) -> Result<Token<'a>> {
+    pub fn lex(&mut self) -> Result<Vec<Token<'a>>, Vec<Token<'a>>> {
+        let mut tokens = Vec::new();
+        let mut has_errors = false;
+
+        for token in self {
+            if let Err(err) = token {
+                has_errors = true;
+
+                eprintln!("{}", err);
+
+                continue
+            }
+
+            tokens.push(token.unwrap());
+        }
+
+        tokens.push(Token::EOF);
+
+        if has_errors {
+            Err(tokens)
+        } else {
+            Ok(tokens)
+        }
+    }
+
+    fn lex_next(&mut self) -> anyhow::Result<Token<'a>> {
         while let Some(&c) = self.chars.peek() {
             if c.is_whitespace() && self.chars.peek().is_some() {
                 if c == '\n' {
@@ -113,7 +137,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn lex_string(&mut self) -> Result<Token<'a>> {
+    fn lex_string(&mut self) -> anyhow::Result<Token<'a>> {
         self.chars.next(); // Consume the opening "
         let mut s = String::new();
 
@@ -131,7 +155,7 @@ impl<'a> Lexer<'a> {
         Err(TokenError::UnterminatedString(self.current_line).into())
     }
 
-    fn lex_number(&mut self) -> Result<Token<'a>> {
+    fn lex_number(&mut self) -> anyhow::Result<Token<'a>> {
         let mut s = String::new();
         while let Some(&c) = self.chars.peek() {
             if c.is_ascii_digit() || c == '.' {
@@ -145,7 +169,7 @@ impl<'a> Lexer<'a> {
         Ok(Token::LitNum(s))
     }
 
-    fn lex_identifier(&mut self) -> Result<Token<'a>> {
+    fn lex_identifier(&mut self) -> anyhow::Result<Token<'a>> {
         let mut s = String::new();
 
         while let Some(&c) = self.chars.peek() {
@@ -166,7 +190,7 @@ impl<'a> Lexer<'a> {
 }
 
 impl<'a> Iterator for Lexer<'a> {
-    type Item = Result<Token<'a>>;
+    type Item = anyhow::Result<Token<'a>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.lex_next() {

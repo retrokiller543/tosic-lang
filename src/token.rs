@@ -1,8 +1,8 @@
 use std::borrow::Cow;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub enum Token<'a> {
     LeftParen,
     RightParen,
@@ -30,7 +30,7 @@ pub enum Token<'a> {
     EOF,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub enum Reserved {
     And,
     Class,
@@ -50,7 +50,7 @@ pub enum Reserved {
     While,
 }
 
-impl Display for Reserved {
+impl Debug for Reserved {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Reserved::And => write!(f, "AND and null"),
@@ -99,7 +99,7 @@ impl FromStr for Reserved {
     }
 }
 
-impl<'a> Display for Token<'a> {
+impl<'a> Debug for Token<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Token::LeftParen => write!(f, "LEFT_PAREN ( null"),
@@ -134,6 +134,60 @@ impl<'a> Display for Token<'a> {
             Token::Ident(s) => write!(f, "IDENTIFIER {} null", s),
             Token::Reserved(r) => write!(f, "{}", r),
             Token::EOF => write!(f, "EOF  null"),
+        }
+    }
+}
+
+impl<'a> Display for Token<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Token::LitStr(s) => write!(f, "{}", s),
+            Token::LitNum(n) => write!(f, "{}", n),
+            Token::Ident(s) => write!(f, "{}", s),
+            Token::Reserved(r) => write!(f, "{}", r),
+            Token::EOF => write!(f, "EOF"),
+            Token::RightBrace => write!(f, "}}"),
+            Token::LeftBrace => write!(f, "{{"),
+            Token::LeftParen => write!(f, "("),
+            Token::RightParen => write!(f, ")"),
+            Token::Star => write!(f, "*"),
+            Token::Dot => write!(f, "."),
+            Token::Comma => write!(f, ","),
+            Token::Plus => write!(f, "+"),
+            Token::Minus => write!(f, "-"),
+            Token::Slash => write!(f, "/"),
+            Token::Equal => write!(f, "="),
+            Token::EqualEqual => write!(f, "=="),
+            Token::Bang => write!(f, "!"),
+            Token::BangEqual => write!(f, "!="),
+            Token::Less => write!(f, "<"),
+            Token::LessEqual => write!(f, "<="),
+            Token::Greater => write!(f, ">"),
+            Token::GreaterEqual => write!(f, ">="),
+            Token::Semicolon => write!(f, ";"),
+        }
+    }
+}
+
+impl Display for Reserved {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Reserved::And => write!(f, "and"),
+            Reserved::Class => write!(f, "class"),
+            Reserved::Else => write!(f, "else"),
+            Reserved::False => write!(f, "false"),
+            Reserved::Fun => write!(f, "fun"),
+            Reserved::For => write!(f, "for"),
+            Reserved::If => write!(f, "if"),
+            Reserved::Nil => write!(f, "nil"),
+            Reserved::Or => write!(f, "or"),
+            Reserved::Print => write!(f, "print"),
+            Reserved::Return => write!(f, "return"),
+            Reserved::Super => write!(f, "super"),
+            Reserved::This => write!(f, "this"),
+            Reserved::True => write!(f, "true"),
+            Reserved::Var => write!(f, "var"),
+            Reserved::While => write!(f, "while"),
         }
     }
 }
