@@ -22,7 +22,12 @@ impl<'a> Lexer<'a> {
     fn lex_next(&mut self) -> Result<Token<'a>> {
         while let Some(&c) = self.chars.peek() {
             if c.is_whitespace() && self.chars.peek().is_some() {
+                if c == '\n' {
+                    self.current_line += 1;
+                }
+
                 self.chars.next();
+
                 continue;
             }
 
