@@ -1,10 +1,10 @@
 mod error;
-pub mod token;
 mod lexer;
+pub mod token;
 
+use crate::lexer::Lexer;
 use std::env;
 use std::fs;
-use crate::lexer::Lexer;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -31,6 +31,8 @@ fn main() {
                         Err(err) => eprintln!("{}", err),
                     }
                 }
+
+                println!("EOF  null");
             } else {
                 println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
             }

@@ -58,7 +58,7 @@ impl<'a> Display for Token<'a> {
                 } else {
                     write!(f, "NUMBER {} {}", n, trim_trailing_zeroes(n))
                 }
-            },
+            }
             Token::EOF => write!(f, "EOF  null"),
         }
     }

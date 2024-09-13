@@ -1,7 +1,7 @@
-use std::borrow::Cow;
 use crate::error::TokenError;
 use crate::token::Token;
 use anyhow::Result;
+use std::borrow::Cow;
 
 pub struct Lexer<'a> {
     #[allow(dead_code)]
@@ -21,7 +21,7 @@ impl<'a> Lexer<'a> {
 
     fn lex_next(&mut self) -> Result<Token<'a>> {
         while let Some(&c) = self.chars.peek() {
-            if c.is_whitespace() {
+            if c.is_whitespace() && self.chars.peek().is_some() {
                 self.chars.next();
                 continue;
             }
@@ -89,6 +89,7 @@ impl<'a> Lexer<'a> {
                 }
             }
         }
+
         Ok(Token::EOF)
     }
 
