@@ -1,5 +1,5 @@
 use crate::error::TokenError;
-use crate::token::Token;
+use crate::token::{Reserved, Token};
 use anyhow::Result;
 use std::borrow::Cow;
 
@@ -157,7 +157,11 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Ok(Token::Ident(Cow::Owned(s)))
+        if let Ok(reserved) = s.parse::<Reserved>() {
+            Ok(Token::Reserved(reserved))
+        } else {
+            Ok(Token::Ident(Cow::Owned(s)))
+        }
     }
 }
 

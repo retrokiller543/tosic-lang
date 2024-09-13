@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::Display;
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq)]
 pub enum Token<'a> {
@@ -25,7 +26,77 @@ pub enum Token<'a> {
     LitStr(Cow<'a, str>),
     LitNum(String),
     Ident(Cow<'a, str>),
+    Reserved(Reserved),
     EOF,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Reserved {
+    And,
+    Class,
+    Else,
+    False,
+    For,
+    Fun,
+    If,
+    Nil,
+    Or,
+    Print,
+    Return,
+    Super,
+    This,
+    True,
+    Var,
+    While,
+}
+
+impl Display for Reserved {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Reserved::And => write!(f, "AND and null"),
+            Reserved::Class => write!(f, "CLASS class null"),
+            Reserved::Else => write!(f, "ELSE else null"),
+            Reserved::False => write!(f, "FALSE false null"),
+            Reserved::For => write!(f, "FOR for null"),
+            Reserved::Fun => write!(f, "FUN fun null"),
+            Reserved::If => write!(f, "IF if null"),
+            Reserved::Nil => write!(f, "NIL nil null"),
+            Reserved::Or => write!(f, "OR or null"),
+            Reserved::Print => write!(f, "PRINT print null"),
+            Reserved::Return => write!(f, "RETURN return null"),
+            Reserved::Super => write!(f, "SUPER super null"),
+            Reserved::This => write!(f, "THIS this null"),
+            Reserved::True => write!(f, "TRUE true null"),
+            Reserved::Var => write!(f, "VAR var null"),
+            Reserved::While => write!(f, "WHILE while null"),
+        }
+    }
+}
+
+impl FromStr for Reserved {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "and" => Ok(Reserved::And),
+            "class" => Ok(Reserved::Class),
+            "else" => Ok(Reserved::Else),
+            "false" => Ok(Reserved::False),
+            "for" => Ok(Reserved::For),
+            "fun" => Ok(Reserved::Fun),
+            "if" => Ok(Reserved::If),
+            "nil" => Ok(Reserved::Nil),
+            "or" => Ok(Reserved::Or),
+            "print" => Ok(Reserved::Print),
+            "return" => Ok(Reserved::Return),
+            "super" => Ok(Reserved::Super),
+            "this" => Ok(Reserved::This),
+            "true" => Ok(Reserved::True),
+            "var" => Ok(Reserved::Var),
+            "while" => Ok(Reserved::While),
+            _ => Err(()),
+        }
+    }
 }
 
 impl<'a> Display for Token<'a> {
@@ -61,6 +132,7 @@ impl<'a> Display for Token<'a> {
                 }
             },
             Token::Ident(s) => write!(f, "IDENTIFIER {} null", s),
+            Token::Reserved(r) => write!(f, "{}", r),
             Token::EOF => write!(f, "EOF  null"),
         }
     }
