@@ -1,9 +1,8 @@
-use crate::error::TokenError;
+use std::borrow::Cow;
 use std::fmt::Display;
-use std::str::FromStr;
 
-#[derive(Debug)]
-pub enum Token {
+#[derive(Debug, PartialEq)]
+pub enum Token<'a> {
     LeftParen,
     RightParen,
     LeftBrace,
@@ -23,19 +22,12 @@ pub enum Token {
     LessEqual,
     Greater,
     GreaterEqual,
-    LitStr(String),
-    LitNum(f64),
+    LitStr(Cow<'a, str>),
+    LitNum(String),
     EOF,
 }
 
-impl Token {
-    pub fn from_string(s: &str, line: usize) -> Result<Self, TokenError> {
-        s.parse()
-            .map_err(|_| TokenError::InvalidToken(s.to_string(), line))
-    }
-}
-
-impl Display for Token {
+impl<'a> Display for Token<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Token::LeftParen => write!(f, "LEFT_PAREN ( null"),
@@ -59,13 +51,12 @@ impl Display for Token {
             Token::Semicolon => write!(f, "SEMICOLON ; null"),
             Token::LitStr(s) => write!(f, "STRING \"{}\" {}", s, s),
             Token::LitNum(n) => {
-                let a = n.to_string();
-                if a.ends_with(".0") {
-                    write!(f, "NUMBER {} {}", a.replace(".0", ""), a)
-                } else if !a.contains(".") {
-                    write!(f, "NUMBER {} {}.0", a, a)
+                if n.ends_with(".0") {
+                    write!(f, "NUMBER {} {}", n.replace(".0", ""), n)
+                } else if !n.contains(".") {
+                    write!(f, "NUMBER {} {}.0", n, n)
                 } else {
-                    write!(f, "NUMBER {} {}", a, a)
+                    write!(f, "NUMBER {} {}", n, trim_trailing_zeroes(n))
                 }
             },
             Token::EOF => write!(f, "EOF  null"),
@@ -73,28 +64,17 @@ impl Display for Token {
     }
 }
 
+fn trim_trailing_zeroes(s: &str) -> String {
+    // s = 42.0000 output = 42.0
+    if !s.contains(".") {
+        return s.to_string();
+    }
 
-impl FromStr for Token {
-    type Err = TokenError;
+    let trimmed = s.trim_end_matches("0").to_string();
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "(" => Ok(Token::LeftParen),
-            ")" => Ok(Token::RightParen),
-            "{" => Ok(Token::LeftBrace),
-            "}" => Ok(Token::RightBrace),
-            "*" => Ok(Token::Star),
-            "." => Ok(Token::Dot),
-            "," => Ok(Token::Comma),
-            "+" => Ok(Token::Plus),
-            "-" => Ok(Token::Minus),
-            ";" => Ok(Token::Semicolon),
-            "/" => Ok(Token::Slash),
-            "=" => Ok(Token::Equal),
-            "!" => Ok(Token::Bang),
-            "<" => Ok(Token::Less),
-            ">" => Ok(Token::Greater),
-            token => Err(TokenError::InvalidToken(token.to_string(), 0)),
-        }
+    if !trimmed.ends_with(".") {
+        trimmed
+    } else {
+        trimmed + "0"
     }
 }
