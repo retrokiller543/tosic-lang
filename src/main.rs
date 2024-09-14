@@ -2,11 +2,42 @@ mod error;
 mod lexer;
 mod parser;
 pub mod token;
+mod evaluator;
+mod value;
 
 use crate::lexer::Lexer;
 use std::env;
 use std::fs;
 use std::process::exit;
+
+fn read_file(filename: &str) -> String {
+    let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
+        eprintln!("Failed to read file {}", filename);
+        String::new()
+    });
+
+    if file_contents.is_empty() {
+        exit(1);
+    }
+
+    file_contents
+}
+
+fn lex_file(file_contents: &str) -> Vec<token::Token> {
+    let mut lexer = Lexer::new(file_contents);
+    lexer.lex().unwrap_or_else(|_| {
+        exit(65);
+    })
+}
+
+fn parse_file(filename: &str) -> Vec<(parser::Expr, usize)> {
+    let file_contents = read_file(filename);
+    let tokens = lex_file(&file_contents);
+    parser::Parser::new(tokens).parse().unwrap_or_else(|err| {
+        eprintln!("{}", err);
+        exit(65);
+    })
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -20,70 +51,29 @@ fn main() {
 
     match command.as_str() {
         "tokenize" => {
-            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
-                eprintln!("Failed to read file {}", filename);
-                String::new()
-            });
+            let file_contents = read_file(filename);
+            let tokens = lex_file(&file_contents);
 
-            if !file_contents.is_empty() {
-                let lexer = Lexer::new(&file_contents);
-                let mut has_errors = false;
-
-                for token_result in lexer {
-                    match token_result {
-                        Ok(token) => println!("{:?}", token),
-                        Err(err) => {
-                            eprintln!("{}", err);
-                            has_errors = true;
-                        }
-                    }
-                }
-
-                println!("EOF  null");
-
-                if has_errors {
-                    std::process::exit(65);
-                }
-            } else {
-                println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
+            for token in tokens {
+                println!("{}", token);
             }
         }
         "parse" => {
-            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
-                eprintln!("Failed to read file {}", filename);
-                String::new()
-            });
+            let expressions = parse_file(filename);
 
-            if file_contents.is_empty() {
-                exit(1);
+            for (expr, _) in expressions {
+                println!("{}", expr);
             }
+        }
+        "evaluate" => {
+            let expressions = parse_file(filename);
 
-            let mut has_lexer_error = false;
+            let evaluator = evaluator::Evaluator::new(expressions);
 
-            let tokens = if let Ok(tokens) = Lexer::new(&file_contents).lex() {
-                tokens
-            } else {
-                has_lexer_error = true;
-                Vec::new()
-            };
-
-            let mut parser = parser::Parser::new(tokens);
-
-            match parser.parse() {
-                Ok(exprs) => {
-                    for expr in exprs {
-                        println!("{}", expr);
-                    }
-                }
-                Err(err) => {
-                    eprintln!("{}", err);
-                    std::process::exit(65);
-                }
-            }
-
-            if has_lexer_error {
+            evaluator.evaluate().unwrap_or_else(|err| {
+                eprintln!("{}", err);
                 exit(65);
-            }
+            })
         }
         _ => {
             eprintln!("Unknown command: {}", command);

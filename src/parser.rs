@@ -1,9 +1,10 @@
-use crate::error::ParserError;
+use crate::error::{EvalError, ParserError};
 use crate::token::{trim_trailing_zeroes, Reserved, Token, TokenKind};
 use std::fmt::Display;
 use std::iter::Peekable;
 use std::str::FromStr;
 use std::vec::IntoIter;
+use crate::value::Value;
 
 #[derive(Debug)]
 pub enum Expr {
@@ -12,6 +13,72 @@ pub enum Expr {
     UnaryOp(UnaryOperator, Box<Expr>),
     BinaryOp(Box<Expr>, Operator, Box<Expr>),
     Group(Box<Expr>),
+}
+
+impl Expr {
+    pub fn evaluate(&self, line: usize) -> Result<Value, EvalError> {
+        match self {
+            Expr::Literal(literal) => match literal {
+                Literal::Number(n) => Ok(Value::Number(*n)),
+                Literal::String(s) => Ok(Value::String(s.clone())),
+                Literal::True => Ok(Value::Boolean(true)),
+                Literal::False => Ok(Value::Boolean(false)),
+                Literal::Nil => Ok(Value::Nil),
+            },
+            Expr::Variable(name) => {
+                // Variable handling is not implemented yet
+                Err(EvalError::UndefinedVariable { name: name.clone(), line })
+            },
+            Expr::UnaryOp(op, expr) => {
+                let value = expr.evaluate(line)?;
+                match (op, value) {
+                    (UnaryOperator::Negate, Value::Number(n)) => Ok(Value::Number(-n)),
+                    (UnaryOperator::Not, Value::Boolean(b)) => Ok(Value::Boolean(!b)),
+                    (UnaryOperator::Not, Value::Nil) => Ok(Value::Boolean(true)),
+                    (UnaryOperator::Not, _) => Ok(Value::Boolean(false)),
+                    (UnaryOperator::Negate, _) => Err(EvalError::TypeError {
+                        message: "Operand must be a number.".to_string(),
+                        line,
+                    }),
+                }
+            },
+            Expr::BinaryOp(left, op, right) => {
+                let left_value = left.evaluate(line)?;
+                let right_value = right.evaluate(line)?;
+                match (op, left_value, right_value) {
+                    // Arithmetic operations
+                    (Operator::Plus, Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
+                    (Operator::Minus, Value::Number(l), Value::Number(r)) => Ok(Value::Number(l - r)),
+                    (Operator::Star, Value::Number(l), Value::Number(r)) => Ok(Value::Number(l * r)),
+                    (Operator::Slash, Value::Number(l), Value::Number(r)) => Ok(Value::Number(l / r)),
+                    // String concatenation
+                    (Operator::Plus, Value::String(l), Value::String(r)) => Ok(Value::String(l + &r)),
+                    // Comparison operators
+                    (Operator::Greater, Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l > r)),
+                    (Operator::GreaterEqual, Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l >= r)),
+                    (Operator::Less, Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l < r)),
+                    (Operator::LessEqual, Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l <= r)),
+                    // Equality operators
+                    (Operator::Equal, l, r) => Ok(Value::Boolean(l == r)),
+                    (Operator::NotEqual, l, r) => Ok(Value::Boolean(l != r)),
+                    // Type errors
+                    (Operator::Plus, _, _) => Err(EvalError::TypeError {
+                        message: "Operands must be two numbers or two strings.".to_string(),
+                        line,
+                    }),
+                    (Operator::Minus | Operator::Star | Operator::Slash, _, _) => Err(EvalError::TypeError {
+                        message: "Operands must be numbers.".to_string(),
+                        line,
+                    }),
+                    (Operator::Greater | Operator::GreaterEqual | Operator::Less | Operator::LessEqual, _, _) => Err(EvalError::TypeError {
+                        message: "Operands must be numbers.".to_string(),
+                        line,
+                    }),
+                }
+            },
+            Expr::Group(expr) => expr.evaluate(line),
+        }
+    }
 }
 
 impl Display for Expr {
@@ -114,15 +181,18 @@ impl<'a> Parser<'a> {
     }
 
     // Entry point for parsing
-    pub fn parse(&mut self) -> Result<Vec<Expr>, ParserError<'a>> {
+    pub fn parse(&mut self) -> Result<Vec<(Expr, usize)>, ParserError<'a>> {
         let mut statements = Vec::new();
 
         while let Some(token) = self.tokens.peek() {
             if token.kind == TokenKind::EOF {
                 break;
             }
+            let line = token.clone().line;
 
-            statements.push(self.parse_expression()?);
+            let expr = self.parse_expression()?;
+
+            statements.push((expr, line));
         }
 
         Ok(statements)
