@@ -1,5 +1,5 @@
 use crate::error::TokenError;
-use crate::token::{Reserved, Token};
+use crate::token::{Reserved, Token, TokenKind};
 use std::borrow::Cow;
 
 pub struct Lexer<'a> {
@@ -22,7 +22,7 @@ impl<'a> Lexer<'a> {
         let mut tokens = Vec::new();
         let mut has_errors = false;
 
-        for token in self {
+        for token in &mut *self {
             if let Err(err) = token {
                 has_errors = true;
 
@@ -34,7 +34,10 @@ impl<'a> Lexer<'a> {
             tokens.push(token.unwrap());
         }
 
-        tokens.push(Token::EOF);
+        tokens.push(Token {
+            kind: TokenKind::EOF,
+            line: self.current_line,
+        });
 
         if has_errors {
             Err(tokens)
@@ -56,58 +59,85 @@ impl<'a> Lexer<'a> {
             }
 
             match c {
-                '(' => return Ok(self.consume(Token::LeftParen)),
-                ')' => return Ok(self.consume(Token::RightParen)),
-                '{' => return Ok(self.consume(Token::LeftBrace)),
-                '}' => return Ok(self.consume(Token::RightBrace)),
-                '*' => return Ok(self.consume(Token::Star)),
-                '.' => return Ok(self.consume(Token::Dot)),
-                ',' => return Ok(self.consume(Token::Comma)),
-                '+' => return Ok(self.consume(Token::Plus)),
-                '-' => return Ok(self.consume(Token::Minus)),
-                ';' => return Ok(self.consume(Token::Semicolon)),
+                '(' => return Ok(self.consume(TokenKind::LeftParen)),
+                ')' => return Ok(self.consume(TokenKind::RightParen)),
+                '{' => return Ok(self.consume(TokenKind::LeftBrace)),
+                '}' => return Ok(self.consume(TokenKind::RightBrace)),
+                '*' => return Ok(self.consume(TokenKind::Star)),
+                '.' => return Ok(self.consume(TokenKind::Dot)),
+                ',' => return Ok(self.consume(TokenKind::Comma)),
+                '+' => return Ok(self.consume(TokenKind::Plus)),
+                '-' => return Ok(self.consume(TokenKind::Minus)),
+                ';' => return Ok(self.consume(TokenKind::Semicolon)),
                 '/' => {
                     self.chars.next();
                     if self.chars.peek() == Some(&'/') {
                         self.skip_comment();
                     } else {
-                        return Ok(Token::Slash);
+                        return Ok(Token {
+                            kind: TokenKind::Slash,
+                            line: self.current_line,
+                        });
                     }
                 }
                 '=' => {
                     self.chars.next();
                     if self.chars.peek() == Some(&'=') {
                         self.chars.next();
-                        return Ok(Token::EqualEqual);
+                        return Ok(Token {
+                            kind: TokenKind::EqualEqual,
+                            line: self.current_line,
+                        });
                     } else {
-                        return Ok(Token::Equal);
+                        return Ok(Token {
+                            kind: TokenKind::Equal,
+                            line: self.current_line,
+                        });
                     }
                 }
                 '!' => {
                     self.chars.next();
                     if self.chars.peek() == Some(&'=') {
                         self.chars.next();
-                        return Ok(Token::BangEqual);
+                        return Ok(Token {
+                            kind: TokenKind::BangEqual,
+                            line: self.current_line,
+                        });
                     } else {
-                        return Ok(Token::Bang);
+                        return Ok(Token {
+                            kind: TokenKind::Bang,
+                            line: self.current_line,
+                        });
                     }
                 }
                 '<' => {
                     self.chars.next();
                     if self.chars.peek() == Some(&'=') {
                         self.chars.next();
-                        return Ok(Token::LessEqual);
+                        return Ok(Token {
+                            kind: TokenKind::LessEqual,
+                            line: self.current_line,
+                        });
                     } else {
-                        return Ok(Token::Less);
+                        return Ok(Token {
+                            kind: TokenKind::Less,
+                            line: self.current_line,
+                        });
                     }
                 }
                 '>' => {
                     self.chars.next();
                     if self.chars.peek() == Some(&'=') {
                         self.chars.next();
-                        return Ok(Token::GreaterEqual);
+                        return Ok(Token {
+                            kind: TokenKind::GreaterEqual,
+                            line: self.current_line,
+                        });
                     } else {
-                        return Ok(Token::Greater);
+                        return Ok(Token {
+                            kind: TokenKind::Greater,
+                            line: self.current_line,
+                        });
                     }
                 }
                 '"' => return self.lex_string(),
@@ -120,12 +150,18 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Ok(Token::EOF)
+        Ok(Token {
+            kind: TokenKind::EOF,
+            line: self.current_line,
+        })
     }
 
-    fn consume(&mut self, token: Token<'a>) -> Token<'a> {
+    fn consume(&mut self, kind: TokenKind<'a>) -> Token<'a> {
         self.chars.next();
-        token
+        Token {
+            kind,
+            line: self.current_line,
+        }
     }
 
     fn skip_comment(&mut self) {
@@ -143,8 +179,11 @@ impl<'a> Lexer<'a> {
 
         while let Some(&c) = self.chars.peek() {
             if c == '"' {
-                self.chars.next(); // Consume closing "
-                return Ok(Token::LitStr(Cow::Owned(s)));
+                self.chars.next();
+                return Ok(Token {
+                    kind: TokenKind::LitStr(Cow::Owned(s)),
+                    line: self.current_line,
+                });
             } else if c == '\n' {
                 return Err(TokenError::UnterminatedString(self.current_line).into());
             }
@@ -166,7 +205,10 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Ok(Token::LitNum(s))
+        Ok(Token {
+            kind: TokenKind::LitNum(s.parse()?),
+            line: self.current_line,
+        })
     }
 
     fn lex_identifier(&mut self) -> anyhow::Result<Token<'a>> {
@@ -182,9 +224,15 @@ impl<'a> Lexer<'a> {
         }
 
         if let Ok(reserved) = s.parse::<Reserved>() {
-            Ok(Token::Reserved(reserved))
+            Ok(Token {
+                kind: TokenKind::Reserved(reserved),
+                line: self.current_line,
+            })
         } else {
-            Ok(Token::Ident(Cow::Owned(s)))
+            Ok(Token {
+                kind: TokenKind::Ident(Cow::from(s)),
+                line: self.current_line,
+            })
         }
     }
 }
@@ -194,7 +242,10 @@ impl<'a> Iterator for Lexer<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.lex_next() {
-            Ok(Token::EOF) => None,
+            Ok(Token {
+                kind: TokenKind::EOF,
+                ..
+            }) => None,
             token => Some(token),
         }
     }

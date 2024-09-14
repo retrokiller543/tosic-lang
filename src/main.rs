@@ -69,10 +69,16 @@ fn main() {
 
             let mut parser = parser::Parser::new(tokens);
 
-            let expr = parser.parse();
-
-            for expr in expr {
-                println!("{}", expr);
+            match parser.parse() {
+                Ok(exprs) => {
+                    for expr in exprs {
+                        println!("{}", expr);
+                    }
+                }
+                Err(err) => {
+                    eprintln!("{}", err);
+                    std::process::exit(65);
+                }
             }
 
             if has_lexer_error {

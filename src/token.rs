@@ -2,8 +2,26 @@ use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
-#[derive(PartialEq)]
-pub enum Token<'a> {
+#[derive(PartialEq, Clone)]
+pub struct Token<'a> {
+    pub kind: TokenKind<'a>,
+    pub line: usize,
+}
+
+impl Debug for Token<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.kind)
+    }
+}
+
+impl Display for Token<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.kind)
+    }
+}
+
+#[derive(PartialEq, Clone)]
+pub enum TokenKind<'a> {
     LeftParen,
     RightParen,
     LeftBrace,
@@ -30,7 +48,7 @@ pub enum Token<'a> {
     EOF,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Reserved {
     And,
     Class,
@@ -99,30 +117,30 @@ impl FromStr for Reserved {
     }
 }
 
-impl<'a> Debug for Token<'a> {
+impl<'a> Debug for TokenKind<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Token::LeftParen => write!(f, "LEFT_PAREN ( null"),
-            Token::RightParen => write!(f, "RIGHT_PAREN ) null"),
-            Token::LeftBrace => write!(f, "LEFT_BRACE {{ null"),
-            Token::RightBrace => write!(f, "RIGHT_BRACE }} null"),
-            Token::Star => write!(f, "STAR * null"),
-            Token::Dot => write!(f, "DOT . null"),
-            Token::Comma => write!(f, "COMMA , null"),
-            Token::Plus => write!(f, "PLUS + null"),
-            Token::Minus => write!(f, "MINUS - null"),
-            Token::Slash => write!(f, "SLASH / null"),
-            Token::Equal => write!(f, "EQUAL = null"),
-            Token::EqualEqual => write!(f, "EQUAL_EQUAL == null"),
-            Token::Bang => write!(f, "BANG ! null"),
-            Token::BangEqual => write!(f, "BANG_EQUAL != null"),
-            Token::Less => write!(f, "LESS < null"),
-            Token::LessEqual => write!(f, "LESS_EQUAL <= null"),
-            Token::Greater => write!(f, "GREATER > null"),
-            Token::GreaterEqual => write!(f, "GREATER_EQUAL >= null"),
-            Token::Semicolon => write!(f, "SEMICOLON ; null"),
-            Token::LitStr(s) => write!(f, "STRING \"{}\" {}", s, s),
-            Token::LitNum(n) => {
+            TokenKind::LeftParen => write!(f, "LEFT_PAREN ( null"),
+            TokenKind::RightParen => write!(f, "RIGHT_PAREN ) null"),
+            TokenKind::LeftBrace => write!(f, "LEFT_BRACE {{ null"),
+            TokenKind::RightBrace => write!(f, "RIGHT_BRACE }} null"),
+            TokenKind::Star => write!(f, "STAR * null"),
+            TokenKind::Dot => write!(f, "DOT . null"),
+            TokenKind::Comma => write!(f, "COMMA , null"),
+            TokenKind::Plus => write!(f, "PLUS + null"),
+            TokenKind::Minus => write!(f, "MINUS - null"),
+            TokenKind::Slash => write!(f, "SLASH / null"),
+            TokenKind::Equal => write!(f, "EQUAL = null"),
+            TokenKind::EqualEqual => write!(f, "EQUAL_EQUAL == null"),
+            TokenKind::Bang => write!(f, "BANG ! null"),
+            TokenKind::BangEqual => write!(f, "BANG_EQUAL != null"),
+            TokenKind::Less => write!(f, "LESS < null"),
+            TokenKind::LessEqual => write!(f, "LESS_EQUAL <= null"),
+            TokenKind::Greater => write!(f, "GREATER > null"),
+            TokenKind::GreaterEqual => write!(f, "GREATER_EQUAL >= null"),
+            TokenKind::Semicolon => write!(f, "SEMICOLON ; null"),
+            TokenKind::LitStr(s) => write!(f, "STRING \"{}\" {}", s, s),
+            TokenKind::LitNum(n) => {
                 if n.ends_with(".0") {
                     write!(f, "NUMBER {} {}", n.replace(".0", ""), n)
                 } else if !n.contains(".") {
@@ -131,18 +149,18 @@ impl<'a> Debug for Token<'a> {
                     write!(f, "NUMBER {} {}", n, trim_trailing_zeroes(n))
                 }
             }
-            Token::Ident(s) => write!(f, "IDENTIFIER {} null", s),
-            Token::Reserved(r) => write!(f, "{:?}", r),
-            Token::EOF => write!(f, "EOF  null"),
+            TokenKind::Ident(s) => write!(f, "IDENTIFIER {} null", s),
+            TokenKind::Reserved(r) => write!(f, "{:?}", r),
+            TokenKind::EOF => write!(f, "EOF  null"),
         }
     }
 }
 
-impl<'a> Display for Token<'a> {
+impl<'a> Display for TokenKind<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Token::LitStr(s) => write!(f, "{}", s),
-            Token::LitNum(n) => {
+            TokenKind::LitStr(s) => write!(f, "{}", s),
+            TokenKind::LitNum(n) => {
                 if n.ends_with(".0") {
                     write!(f, "{}", n)
                 } else if !n.contains(".") {
@@ -151,28 +169,28 @@ impl<'a> Display for Token<'a> {
                     write!(f, "{}", trim_trailing_zeroes(n))
                 }
             }
-            Token::Ident(s) => write!(f, "{}", s),
-            Token::Reserved(r) => write!(f, "{}", r),
-            Token::EOF => write!(f, "EOF"),
-            Token::RightBrace => write!(f, "}}"),
-            Token::LeftBrace => write!(f, "{{"),
-            Token::LeftParen => write!(f, "("),
-            Token::RightParen => write!(f, ")"),
-            Token::Star => write!(f, "*"),
-            Token::Dot => write!(f, "."),
-            Token::Comma => write!(f, ","),
-            Token::Plus => write!(f, "+"),
-            Token::Minus => write!(f, "-"),
-            Token::Slash => write!(f, "/"),
-            Token::Equal => write!(f, "="),
-            Token::EqualEqual => write!(f, "=="),
-            Token::Bang => write!(f, "!"),
-            Token::BangEqual => write!(f, "!="),
-            Token::Less => write!(f, "<"),
-            Token::LessEqual => write!(f, "<="),
-            Token::Greater => write!(f, ">"),
-            Token::GreaterEqual => write!(f, ">="),
-            Token::Semicolon => write!(f, ";"),
+            TokenKind::Ident(s) => write!(f, "{}", s),
+            TokenKind::Reserved(r) => write!(f, "{}", r),
+            TokenKind::EOF => write!(f, "EOF"),
+            TokenKind::RightBrace => write!(f, "}}"),
+            TokenKind::LeftBrace => write!(f, "{{"),
+            TokenKind::LeftParen => write!(f, "("),
+            TokenKind::RightParen => write!(f, ")"),
+            TokenKind::Star => write!(f, "*"),
+            TokenKind::Dot => write!(f, "."),
+            TokenKind::Comma => write!(f, ","),
+            TokenKind::Plus => write!(f, "+"),
+            TokenKind::Minus => write!(f, "-"),
+            TokenKind::Slash => write!(f, "/"),
+            TokenKind::Equal => write!(f, "="),
+            TokenKind::EqualEqual => write!(f, "=="),
+            TokenKind::Bang => write!(f, "!"),
+            TokenKind::BangEqual => write!(f, "!="),
+            TokenKind::Less => write!(f, "<"),
+            TokenKind::LessEqual => write!(f, "<="),
+            TokenKind::Greater => write!(f, ">"),
+            TokenKind::GreaterEqual => write!(f, ">="),
+            TokenKind::Semicolon => write!(f, ";"),
         }
     }
 }

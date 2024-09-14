@@ -1,4 +1,5 @@
-use crate::token::{trim_trailing_zeroes, Reserved, Token};
+use crate::error::ParserError;
+use crate::token::{trim_trailing_zeroes, Reserved, Token, TokenKind};
 use std::fmt::Display;
 use std::iter::Peekable;
 use std::str::FromStr;
@@ -113,146 +114,192 @@ impl<'a> Parser<'a> {
     }
 
     // Entry point for parsing
-    pub fn parse(&mut self) -> Vec<Expr> {
+    pub fn parse(&mut self) -> Result<Vec<Expr>, ParserError<'a>> {
         let mut statements = Vec::new();
 
-        while let Some(expr) = self.parse_expression() {
-            statements.push(expr);
+        while let Some(token) = self.tokens.peek() {
+            if token.kind == TokenKind::EOF {
+                break;
+            }
+
+            statements.push(self.parse_expression()?);
         }
 
-        statements
+        Ok(statements)
     }
 
-    // Parses an expression (handles addition and subtraction)
-    fn parse_expression(&mut self) -> Option<Expr> {
-        self.parse_term() // Start by parsing terms (handles * and /)
+    fn parse_expression(&mut self) -> Result<Expr, ParserError<'a>> {
+        self.parse_equality()
     }
 
-    // Parses terms (handles multiplication and division)
-    fn parse_term(&mut self) -> Option<Expr> {
-        let mut expr = self.parse_factor()?; // Parse the left-hand side
+    // Parses equality expressions (handles == and !=)
+    fn parse_equality(&mut self) -> Result<Expr, ParserError<'a>> {
+        let mut expr = self.parse_comparison()?;
 
-        while let Some(op) = self.parse_operator(&[
-            Token::Plus,
-            Token::Minus,
-            Token::Star,
-            Token::Slash,
-            Token::Less,
-            Token::LessEqual,
-            Token::Greater,
-            Token::GreaterEqual,
-            Token::EqualEqual,
-            Token::BangEqual,
-        ]) {
-            let right = self.parse_factor()?; // Parse the right-hand side
-            expr = Expr::BinaryOp(Box::new(expr), op, Box::new(right)); // Build the BinaryOp
+        while let Some(token) = self.tokens.peek() {
+            match &token.kind {
+                TokenKind::EqualEqual | TokenKind::BangEqual => {
+                    let operator =
+                        self.parse_operator(&[TokenKind::EqualEqual, TokenKind::BangEqual])?;
+                    let right = self.parse_comparison()?;
+                    expr = Expr::BinaryOp(Box::new(expr), operator, Box::new(right));
+                }
+                _ => break,
+            }
         }
 
-        Some(expr)
+        Ok(expr)
     }
 
-    // Parses factors (numbers, variables, unary operations, and grouped expressions)
-    fn parse_factor(&mut self) -> Option<Expr> {
-        if let Some(Token::Minus) = self.tokens.peek() {
-            self.tokens.next(); // Consume the minus
-            let expr = self.parse_factor()?; // Recursively call parse_factor to handle the expression after the minus
-            return Some(Expr::UnaryOp(UnaryOperator::Negate, Box::new(expr)));
+    // Parses comparison expressions (handles >, >=, <, <=)
+    fn parse_comparison(&mut self) -> Result<Expr, ParserError<'a>> {
+        let mut expr = self.parse_term()?;
+
+        while let Some(token) = self.tokens.peek() {
+            match &token.kind {
+                TokenKind::Greater
+                | TokenKind::GreaterEqual
+                | TokenKind::Less
+                | TokenKind::LessEqual => {
+                    let operator = self.parse_operator(&[
+                        TokenKind::Greater,
+                        TokenKind::GreaterEqual,
+                        TokenKind::Less,
+                        TokenKind::LessEqual,
+                    ])?;
+                    let right = self.parse_term()?;
+                    expr = Expr::BinaryOp(Box::new(expr), operator, Box::new(right));
+                }
+                _ => break,
+            }
         }
 
-        if let Some(Token::Bang) = self.tokens.peek() {
-            self.tokens.next(); // Consume the bang
-            let expr = self.parse_factor()?; // Recursively call parse_factor to handle the expression after the bang
-            return Some(Expr::UnaryOp(UnaryOperator::Not, Box::new(expr)));
+        Ok(expr)
+    }
+
+    // Parses terms (handles addition and subtraction)
+    fn parse_term(&mut self) -> Result<Expr, ParserError<'a>> {
+        let mut expr = self.parse_factor()?;
+
+        while let Some(token) = self.tokens.peek() {
+            match &token.kind {
+                TokenKind::Plus | TokenKind::Minus => {
+                    let operator = self.parse_operator(&[TokenKind::Plus, TokenKind::Minus])?;
+                    let right = self.parse_factor()?;
+                    expr = Expr::BinaryOp(Box::new(expr), operator, Box::new(right));
+                }
+                _ => break,
+            }
         }
 
-        // Handle grouped expressions (parentheses)
-        if let Some(Token::LeftParen) = self.tokens.peek() {
-            return self.parse_parentheses();
+        Ok(expr)
+    }
+
+    // Parses factors (handles multiplication and division)
+    fn parse_factor(&mut self) -> Result<Expr, ParserError<'a>> {
+        let mut expr = self.parse_unary()?;
+
+        while let Some(token) = self.tokens.peek() {
+            match &token.kind {
+                TokenKind::Star | TokenKind::Slash => {
+                    let operator = self.parse_operator(&[TokenKind::Star, TokenKind::Slash])?;
+                    let right = self.parse_unary()?;
+                    expr = Expr::BinaryOp(Box::new(expr), operator, Box::new(right));
+                }
+                _ => break,
+            }
         }
 
-        // Handle literals and identifiers
+        Ok(expr)
+    }
+
+    // Parses unary expressions (handles ! and -)
+    fn parse_unary(&mut self) -> Result<Expr, ParserError<'a>> {
+        if let Some(token) = self.tokens.peek() {
+            match &token.kind {
+                TokenKind::Bang => {
+                    let _token = self.tokens.next().unwrap(); // Consume '!'
+                    let right = self.parse_unary()?;
+                    return Ok(Expr::UnaryOp(UnaryOperator::Not, Box::new(right)));
+                }
+                TokenKind::Minus => {
+                    let _token = self.tokens.next().unwrap(); // Consume '-'
+                    let right = self.parse_unary()?;
+                    return Ok(Expr::UnaryOp(UnaryOperator::Negate, Box::new(right)));
+                }
+                _ => {}
+            }
+        }
+
         self.parse_primary()
     }
 
-    // Parses primary expressions (numbers, variables, literals)
-    fn parse_primary(&mut self) -> Option<Expr> {
-        match self.tokens.peek() {
-            Some(Token::LitNum(_)) => self.parse_number(),
-
-            Some(Token::LitStr(ref s)) => {
-                let s = s.clone();
-                self.tokens.next(); // Consume the string token
-                Some(Expr::Literal(Literal::String(s.into_owned())))
-            }
-
-            Some(Token::Reserved(Reserved::True)) => {
-                self.tokens.next(); // Consume 'true' token
-                Some(Expr::Literal(Literal::True))
-            }
-
-            Some(Token::Reserved(Reserved::False)) => {
-                self.tokens.next(); // Consume 'false' token
-                Some(Expr::Literal(Literal::False))
-            }
-
-            Some(Token::Reserved(Reserved::Nil)) => {
-                self.tokens.next(); // Consume 'nil' token
-                Some(Expr::Literal(Literal::Nil))
-            }
-
-            Some(Token::Ident(ref id)) => {
-                let id = id.clone();
-                self.tokens.next(); // Consume the identifier
-                Some(Expr::Variable(id.to_string()))
-            }
-
-            _ => None,
-        }
-    }
-
-    // Parses number literals
-    fn parse_number(&mut self) -> Option<Expr> {
-        if let Some(Token::LitNum(ref s)) = self.tokens.peek() {
-            if let Ok(value) = f64::from_str(s) {
-                self.tokens.next(); // Consume the number token
-                return Some(Expr::Literal(Literal::Number(value)));
-            }
-        }
-        None
-    }
-
-    // Parses expressions inside parentheses and groups them
-    fn parse_parentheses(&mut self) -> Option<Expr> {
-        self.tokens.next(); // Consume the '('
-        let expr = self.parse_expression()?; // Parse the expression inside the parentheses
-        if self.tokens.next() == Some(Token::RightParen) {
-            return Some(Expr::Group(Box::new(expr))); // Return a grouped expression
-        }
-        None
-    }
-
-    // Parses binary operators and maps them to the correct `Operator` enum
-    fn parse_operator(&mut self, expected: &[Token<'a>]) -> Option<Operator> {
-        if let Some(token) = self.tokens.peek() {
-            for op in expected {
-                if token == op {
-                    self.tokens.next(); // Consume the operator token
-                    return match op {
-                        Token::Plus => Some(Operator::Plus),
-                        Token::Minus => Some(Operator::Minus),
-                        Token::Star => Some(Operator::Star),
-                        Token::Slash => Some(Operator::Slash),
-                        Token::Less => Some(Operator::Less),
-                        Token::LessEqual => Some(Operator::LessEqual),
-                        Token::Greater => Some(Operator::Greater),
-                        Token::GreaterEqual => Some(Operator::GreaterEqual),
-                        Token::EqualEqual => Some(Operator::Equal),
-                        Token::BangEqual => Some(Operator::NotEqual),
-                        _ => None,
-                    };
+    // Parses primary expressions (literals, identifiers, and grouped expressions)
+    fn parse_primary(&mut self) -> Result<Expr, ParserError<'a>> {
+        if let Some(token) = self.tokens.next() {
+            match &token.kind {
+                TokenKind::LitNum(s) => {
+                    if let Ok(value) = f64::from_str(s) {
+                        Ok(Expr::Literal(Literal::Number(value)))
+                    } else {
+                        Err(ParserError::InvalidNumber(token.line, token))
+                    }
                 }
+                TokenKind::LitStr(s) => Ok(Expr::Literal(Literal::String(s.to_string()))),
+                TokenKind::Reserved(Reserved::True) => Ok(Expr::Literal(Literal::True)),
+                TokenKind::Reserved(Reserved::False) => Ok(Expr::Literal(Literal::False)),
+                TokenKind::Reserved(Reserved::Nil) => Ok(Expr::Literal(Literal::Nil)),
+                TokenKind::Ident(name) => Ok(Expr::Variable(name.to_string())),
+                TokenKind::LeftParen => {
+                    let expr = self.parse_expression()?;
+                    if let Some(next_token) = self.tokens.next() {
+                        if let TokenKind::RightParen = next_token.kind {
+                            Ok(Expr::Group(Box::new(expr)))
+                        } else {
+                            Err(ParserError::ExpectedToken(token.line, next_token, "')'"))
+                        }
+                    } else {
+                        Err(ParserError::UnexpectedEOF(token.line))
+                    }
+                }
+                TokenKind::EOF => Err(ParserError::UnexpectedEOF(token.line)),
+                _ => Err(ParserError::ExpectedExpression(token.line, token)),
             }
+        } else {
+            Err(ParserError::UnexpectedEOF(0))
         }
-        None
+    }
+
+    // Parses an operator and returns the corresponding Operator enum
+    fn parse_operator(&mut self, expected: &[TokenKind<'a>]) -> Result<Operator, ParserError<'a>> {
+        if let Some(token) = self.tokens.next() {
+            if expected.contains(&token.kind) {
+                match token.kind {
+                    TokenKind::Plus => Ok(Operator::Plus),
+                    TokenKind::Minus => Ok(Operator::Minus),
+                    TokenKind::Star => Ok(Operator::Star),
+                    TokenKind::Slash => Ok(Operator::Slash),
+                    TokenKind::Less => Ok(Operator::Less),
+                    TokenKind::LessEqual => Ok(Operator::LessEqual),
+                    TokenKind::Greater => Ok(Operator::Greater),
+                    TokenKind::GreaterEqual => Ok(Operator::GreaterEqual),
+                    TokenKind::EqualEqual => Ok(Operator::Equal),
+                    TokenKind::BangEqual => Ok(Operator::NotEqual),
+                    _ => Err(ParserError::UnexpectedToken(
+                        token.line,
+                        token,
+                        "Invalid operator",
+                    )),
+                }
+            } else {
+                Err(ParserError::UnexpectedToken(
+                    token.line,
+                    token,
+                    "Expected operator",
+                ))
+            }
+        } else {
+            Err(ParserError::UnexpectedEOF(0))
+        }
     }
 }
