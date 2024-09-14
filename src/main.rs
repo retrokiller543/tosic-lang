@@ -17,6 +17,7 @@ fn read_file(filename: &str) -> String {
     });
 
     if file_contents.is_empty() {
+        eprintln!("EOF  null");
         exit(0);
     }
 
