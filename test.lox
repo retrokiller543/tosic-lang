@@ -3,3 +3,5 @@
 ("foo")
 !true
 !!false
+"foo" + "bar"
+1 + 2 * 3

@@ -8,7 +8,7 @@ use std::vec::IntoIter;
 pub enum Expr {
     Literal(Literal),
     Variable(String),
-    UnaryOp(UnaryOperator, Box<Expr>), // Unary operators like - and !
+    UnaryOp(UnaryOperator, Box<Expr>),
     BinaryOp(Box<Expr>, Operator, Box<Expr>),
     Group(Box<Expr>),
 }
@@ -57,8 +57,8 @@ impl Display for Literal {
 
 #[derive(Debug)]
 pub enum UnaryOperator {
-    Negate, // For - (negation)
-    Not,    // For ! (logical NOT)
+    Negate,
+    Not,
 }
 
 impl Display for UnaryOperator {
@@ -120,7 +120,7 @@ impl<'a> Parser<'a> {
     fn parse_term(&mut self) -> Option<Expr> {
         let mut expr = self.parse_factor()?; // Parse the left-hand side
 
-        while let Some(op) = self.parse_operator(&[Token::Star, Token::Slash]) {
+        while let Some(op) = self.parse_operator(&[Token::Plus, Token::Minus, Token::Star, Token::Slash]) {
             let right = self.parse_factor()?; // Parse the right-hand side
             expr = Expr::BinaryOp(Box::new(expr), op, Box::new(right)); // Build the BinaryOp
         }
