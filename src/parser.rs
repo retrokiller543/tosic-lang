@@ -1,9 +1,8 @@
-use std::borrow::Cow;
-use std::str::FromStr;
+use crate::token::{trim_trailing_zeroes, Reserved, Token};
 use std::fmt::Display;
 use std::iter::Peekable;
+use std::str::FromStr;
 use std::vec::IntoIter;
-use crate::token::{trim_trailing_zeroes, Reserved, Token};
 
 #[derive(Debug)]
 pub enum Expr {
@@ -14,14 +13,14 @@ pub enum Expr {
     Group(Box<Expr>),
 }
 
-impl Expr {
-    pub fn to_string(&self) -> String {
+impl Display for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Expr::Literal(l) => l.to_string(),
-            Expr::Variable(s) => s.to_string(),
-            Expr::UnaryOp(op, e) => format!("({} {})", op.to_string(), e.to_string()),
-            Expr::BinaryOp(l, op, r) => format!("({} {} {})", l.to_string(), op.to_string(), r.to_string()),
-            Expr::Group(e) => format!("(group {})", e.to_string()),
+            Expr::Literal(l) => write!(f, "{}", l),
+            Expr::Variable(s) => write!(f, "{}", s),
+            Expr::UnaryOp(op, e) => write!(f, "({} {})", op, e),
+            Expr::BinaryOp(l, op, r) => write!(f, "({} {} {})", l, op, r),
+            Expr::Group(e) => write!(f, "(group {})", e),
         }
     }
 }
@@ -58,8 +57,8 @@ impl Display for Literal {
 
 #[derive(Debug)]
 pub enum UnaryOperator {
-    Negate,    // For - (negation)
-    Not,       // For ! (logical NOT)
+    Negate, // For - (negation)
+    Not,    // For ! (logical NOT)
 }
 
 impl Display for UnaryOperator {
@@ -106,14 +105,14 @@ impl<'a> Parser<'a> {
         // Handle - (negation)
         if let Some(Token::Minus) = self.tokens.peek() {
             self.tokens.next(); // Consume the minus
-            let expr = self.parse_primary()?;
+            let expr = self.parse_expression()?;
             return Some(Expr::UnaryOp(UnaryOperator::Negate, Box::new(expr)));
         }
 
         // Handle ! (logical NOT)
         if let Some(Token::Bang) = self.tokens.peek() {
             self.tokens.next(); // Consume the bang
-            let expr = self.parse_primary()?;
+            let expr = self.parse_expression()?;
             return Some(Expr::UnaryOp(UnaryOperator::Not, Box::new(expr)));
         }
 
