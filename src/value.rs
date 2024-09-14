@@ -21,7 +21,7 @@ impl Display for Value {
                 } else {
                     write!(f, "{}", n_str.trim_end_matches('0').trim_end_matches('.'))
                 }
-            },
+            }
             Value::String(s) => write!(f, "{}", s),
             Value::Boolean(b) => write!(f, "{}", b),
             Value::Nil => write!(f, "nil"),

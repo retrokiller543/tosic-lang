@@ -1,10 +1,10 @@
 use crate::error::{EvalError, ParserError};
 use crate::token::{trim_trailing_zeroes, Reserved, Token, TokenKind};
+use crate::value::Value;
 use std::fmt::Display;
 use std::iter::Peekable;
 use std::str::FromStr;
 use std::vec::IntoIter;
-use crate::value::Value;
 
 #[derive(Debug)]
 pub enum Expr {
@@ -27,8 +27,11 @@ impl Expr {
             },
             Expr::Variable(name) => {
                 // Variable handling is not implemented yet
-                Err(EvalError::UndefinedVariable { name: name.clone(), line })
-            },
+                Err(EvalError::UndefinedVariable {
+                    name: name.clone(),
+                    line,
+                })
+            }
             Expr::UnaryOp(op, expr) => {
                 let value = expr.evaluate(line)?;
                 match (op, value) {
@@ -41,23 +44,41 @@ impl Expr {
                         line,
                     }),
                 }
-            },
+            }
             Expr::BinaryOp(left, op, right) => {
                 let left_value = left.evaluate(line)?;
                 let right_value = right.evaluate(line)?;
                 match (op, left_value, right_value) {
                     // Arithmetic operations
-                    (Operator::Plus, Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
-                    (Operator::Minus, Value::Number(l), Value::Number(r)) => Ok(Value::Number(l - r)),
-                    (Operator::Star, Value::Number(l), Value::Number(r)) => Ok(Value::Number(l * r)),
-                    (Operator::Slash, Value::Number(l), Value::Number(r)) => Ok(Value::Number(l / r)),
+                    (Operator::Plus, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Number(l + r))
+                    }
+                    (Operator::Minus, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Number(l - r))
+                    }
+                    (Operator::Star, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Number(l * r))
+                    }
+                    (Operator::Slash, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Number(l / r))
+                    }
                     // String concatenation
-                    (Operator::Plus, Value::String(l), Value::String(r)) => Ok(Value::String(l + &r)),
+                    (Operator::Plus, Value::String(l), Value::String(r)) => {
+                        Ok(Value::String(l + &r))
+                    }
                     // Comparison operators
-                    (Operator::Greater, Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l > r)),
-                    (Operator::GreaterEqual, Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l >= r)),
-                    (Operator::Less, Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l < r)),
-                    (Operator::LessEqual, Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l <= r)),
+                    (Operator::Greater, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Boolean(l > r))
+                    }
+                    (Operator::GreaterEqual, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Boolean(l >= r))
+                    }
+                    (Operator::Less, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Boolean(l < r))
+                    }
+                    (Operator::LessEqual, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Boolean(l <= r))
+                    }
                     // Equality operators
                     (Operator::Equal, l, r) => Ok(Value::Boolean(l == r)),
                     (Operator::NotEqual, l, r) => Ok(Value::Boolean(l != r)),
@@ -66,16 +87,25 @@ impl Expr {
                         message: "Operands must be two numbers or two strings.".to_string(),
                         line,
                     }),
-                    (Operator::Minus | Operator::Star | Operator::Slash, _, _) => Err(EvalError::TypeError {
-                        message: "Operands must be numbers.".to_string(),
-                        line,
-                    }),
-                    (Operator::Greater | Operator::GreaterEqual | Operator::Less | Operator::LessEqual, _, _) => Err(EvalError::TypeError {
+                    (Operator::Minus | Operator::Star | Operator::Slash, _, _) => {
+                        Err(EvalError::TypeError {
+                            message: "Operands must be numbers.".to_string(),
+                            line,
+                        })
+                    }
+                    (
+                        Operator::Greater
+                        | Operator::GreaterEqual
+                        | Operator::Less
+                        | Operator::LessEqual,
+                        _,
+                        _,
+                    ) => Err(EvalError::TypeError {
                         message: "Operands must be numbers.".to_string(),
                         line,
                     }),
                 }
-            },
+            }
             Expr::Group(expr) => expr.evaluate(line),
         }
     }

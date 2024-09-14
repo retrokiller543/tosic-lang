@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::token::Token;
 use thiserror::Error;
 

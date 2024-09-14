@@ -1,8 +1,8 @@
 mod error;
+mod evaluator;
 mod lexer;
 mod parser;
 pub mod token;
-mod evaluator;
 mod value;
 
 use crate::lexer::Lexer;
@@ -27,10 +27,13 @@ fn lex_file(file_contents: &str) -> (Vec<token::Token>, bool) {
     let mut lexer = Lexer::new(file_contents);
     let mut has_error = false;
 
-    (lexer.lex().unwrap_or_else(|tokens| {
-        has_error = true;
-        tokens
-    }), has_error)
+    (
+        lexer.lex().unwrap_or_else(|tokens| {
+            has_error = true;
+            tokens
+        }),
+        has_error,
+    )
 }
 
 fn parse_file(filename: &str) -> Vec<(parser::Expr, usize)> {
