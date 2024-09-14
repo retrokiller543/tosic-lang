@@ -67,8 +67,6 @@ fn main() {
                 Vec::new()
             };
 
-            dbg!(&tokens);
-
             let mut parser = parser::Parser::new(tokens);
 
             let expr = parser.parse();

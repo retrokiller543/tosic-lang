@@ -19,7 +19,7 @@ impl Display for Expr {
             Expr::Literal(l) => write!(f, "{}", l),
             Expr::Variable(s) => write!(f, "{}", s),
             Expr::UnaryOp(op, e) => write!(f, "({} {})", op, e),
-            Expr::BinaryOp(l, op, r) => write!(f, "({} {} {})", l, op, r),
+            Expr::BinaryOp(l, op, r) => write!(f, "({} {} {})", op, l, r),
             Expr::Group(e) => write!(f, "(group {})", e),
         }
     }
