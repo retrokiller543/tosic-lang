@@ -76,6 +76,12 @@ pub enum Operator {
     Minus,
     Star,
     Slash,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    Equal,
+    NotEqual,
 }
 
 impl Display for Operator {
@@ -85,6 +91,12 @@ impl Display for Operator {
             Operator::Minus => write!(f, "-"),
             Operator::Star => write!(f, "*"),
             Operator::Slash => write!(f, "/"),
+            Operator::Less => write!(f, "<"),
+            Operator::LessEqual => write!(f, "<="),
+            Operator::Greater => write!(f, ">"),
+            Operator::GreaterEqual => write!(f, ">="),
+            Operator::Equal => write!(f, "=="),
+            Operator::NotEqual => write!(f, "!="),
         }
     }
 }
@@ -120,7 +132,18 @@ impl<'a> Parser<'a> {
     fn parse_term(&mut self) -> Option<Expr> {
         let mut expr = self.parse_factor()?; // Parse the left-hand side
 
-        while let Some(op) = self.parse_operator(&[Token::Plus, Token::Minus, Token::Star, Token::Slash]) {
+        while let Some(op) = self.parse_operator(&[
+            Token::Plus,
+            Token::Minus,
+            Token::Star,
+            Token::Slash,
+            Token::Less,
+            Token::LessEqual,
+            Token::Greater,
+            Token::GreaterEqual,
+            Token::EqualEqual,
+            Token::BangEqual,
+        ]) {
             let right = self.parse_factor()?; // Parse the right-hand side
             expr = Expr::BinaryOp(Box::new(expr), op, Box::new(right)); // Build the BinaryOp
         }
@@ -219,6 +242,12 @@ impl<'a> Parser<'a> {
                         Token::Minus => Some(Operator::Minus),
                         Token::Star => Some(Operator::Star),
                         Token::Slash => Some(Operator::Slash),
+                        Token::Less => Some(Operator::Less),
+                        Token::LessEqual => Some(Operator::LessEqual),
+                        Token::Greater => Some(Operator::Greater),
+                        Token::GreaterEqual => Some(Operator::GreaterEqual),
+                        Token::EqualEqual => Some(Operator::Equal),
+                        Token::BangEqual => Some(Operator::NotEqual),
                         _ => None,
                     };
                 }

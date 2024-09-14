@@ -72,7 +72,7 @@ fn main() {
             let expr = parser.parse();
 
             for expr in expr {
-                println!("{}", expr.to_string());
+                println!("{}", expr);
             }
 
             if has_lexer_error {
