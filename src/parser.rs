@@ -100,62 +100,86 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // Parses unary operations (like -expr or !expr)
-    fn parse_unary(&mut self) -> Option<Expr> {
-        // Handle - (negation)
+    // Entry point for parsing
+    pub fn parse(&mut self) -> Vec<Expr> {
+        let mut statements = Vec::new();
+
+        while let Some(expr) = self.parse_expression() {
+            statements.push(expr);
+        }
+
+        statements
+    }
+
+    // Parses an expression (handles addition and subtraction)
+    fn parse_expression(&mut self) -> Option<Expr> {
+        self.parse_term() // Start by parsing terms (handles * and /)
+    }
+
+    // Parses terms (handles multiplication and division)
+    fn parse_term(&mut self) -> Option<Expr> {
+        let mut expr = self.parse_factor()?; // Parse the left-hand side
+
+        while let Some(op) = self.parse_operator(&[Token::Star, Token::Slash]) {
+            let right = self.parse_factor()?; // Parse the right-hand side
+            expr = Expr::BinaryOp(Box::new(expr), op, Box::new(right)); // Build the BinaryOp
+        }
+
+        Some(expr)
+    }
+
+    // Parses factors (numbers, variables, unary operations, and grouped expressions)
+    fn parse_factor(&mut self) -> Option<Expr> {
         if let Some(Token::Minus) = self.tokens.peek() {
             self.tokens.next(); // Consume the minus
-            let expr = self.parse_expression()?;
+            let expr = self.parse_factor()?; // Recursively call parse_factor to handle the expression after the minus
             return Some(Expr::UnaryOp(UnaryOperator::Negate, Box::new(expr)));
         }
 
-        // Handle ! (logical NOT)
         if let Some(Token::Bang) = self.tokens.peek() {
             self.tokens.next(); // Consume the bang
-            let expr = self.parse_expression()?;
+            let expr = self.parse_factor()?; // Recursively call parse_factor to handle the expression after the bang
             return Some(Expr::UnaryOp(UnaryOperator::Not, Box::new(expr)));
         }
 
-        // If no unary operator, parse as primary expression
+        // Handle grouped expressions (parentheses)
+        if let Some(Token::LeftParen) = self.tokens.peek() {
+            return self.parse_parentheses();
+        }
+
+        // Handle literals and identifiers
         self.parse_primary()
     }
 
-    // Parses primary expressions: numbers, strings, booleans, nil, and parentheses
+    // Parses primary expressions (numbers, variables, literals)
     fn parse_primary(&mut self) -> Option<Expr> {
         match self.tokens.peek() {
-            // Handle numeric literals
             Some(Token::LitNum(_)) => self.parse_number(),
 
-            // Handle string literals
             Some(Token::LitStr(ref s)) => {
                 let s = s.clone();
                 self.tokens.next(); // Consume the string token
                 Some(Expr::Literal(Literal::String(s.into_owned())))
             }
 
-            // Handle boolean literals 'true' and 'false'
             Some(Token::Reserved(Reserved::True)) => {
                 self.tokens.next(); // Consume 'true' token
                 Some(Expr::Literal(Literal::True))
             }
+
             Some(Token::Reserved(Reserved::False)) => {
                 self.tokens.next(); // Consume 'false' token
                 Some(Expr::Literal(Literal::False))
             }
 
-            // Handle nil literal
             Some(Token::Reserved(Reserved::Nil)) => {
                 self.tokens.next(); // Consume 'nil' token
                 Some(Expr::Literal(Literal::Nil))
             }
 
-            // Handle expressions inside parentheses
-            Some(Token::LeftParen) => self.parse_parentheses(),
-
-            // Handle variable identifiers
             Some(Token::Ident(ref id)) => {
                 let id = id.clone();
-                self.tokens.next(); // Consume identifier token
+                self.tokens.next(); // Consume the identifier
                 Some(Expr::Variable(id.to_string()))
             }
 
@@ -167,7 +191,7 @@ impl<'a> Parser<'a> {
     fn parse_number(&mut self) -> Option<Expr> {
         if let Some(Token::LitNum(ref s)) = self.tokens.peek() {
             if let Ok(value) = f64::from_str(s) {
-                self.tokens.next(); // Consume the token
+                self.tokens.next(); // Consume the number token
                 return Some(Expr::Literal(Literal::Number(value)));
             }
         }
@@ -176,59 +200,30 @@ impl<'a> Parser<'a> {
 
     // Parses expressions inside parentheses and groups them
     fn parse_parentheses(&mut self) -> Option<Expr> {
-        if self.tokens.next() == Some(Token::LeftParen) {
-            let expr = self.parse_expression()?;
-            if self.tokens.next() == Some(Token::RightParen) {
-                return Some(Expr::Group(Box::new(expr)));
-            }
+        self.tokens.next(); // Consume the '('
+        let expr = self.parse_expression()?; // Parse the expression inside the parentheses
+        if self.tokens.next() == Some(Token::RightParen) {
+            return Some(Expr::Group(Box::new(expr))); // Return a grouped expression
         }
         None
     }
 
-    // Parses binary expressions with operators
-    fn parse_expression(&mut self) -> Option<Expr> {
-        let mut expr = self.parse_unary()?;
-
-        // Parse binary operators and chain the expressions together
-        while let Some(op) = self.parse_operator() {
-            let right = self.parse_unary()?;
-            expr = Expr::BinaryOp(Box::new(expr), op, Box::new(right));
+    // Parses binary operators and maps them to the correct `Operator` enum
+    fn parse_operator(&mut self, expected: &[Token<'a>]) -> Option<Operator> {
+        if let Some(token) = self.tokens.peek() {
+            for op in expected {
+                if token == op {
+                    self.tokens.next(); // Consume the operator token
+                    return match op {
+                        Token::Plus => Some(Operator::Plus),
+                        Token::Minus => Some(Operator::Minus),
+                        Token::Star => Some(Operator::Star),
+                        Token::Slash => Some(Operator::Slash),
+                        _ => None,
+                    };
+                }
+            }
         }
-
-        Some(expr)
-    }
-
-    // Parses operators
-    fn parse_operator(&mut self) -> Option<Operator> {
-        match self.tokens.peek() {
-            Some(Token::Plus) => {
-                self.tokens.next(); // Consume the plus
-                Some(Operator::Plus)
-            }
-            Some(Token::Minus) => {
-                self.tokens.next(); // Consume the minus
-                Some(Operator::Minus)
-            }
-            Some(Token::Star) => {
-                self.tokens.next(); // Consume the star
-                Some(Operator::Star)
-            }
-            Some(Token::Slash) => {
-                self.tokens.next(); // Consume the slash
-                Some(Operator::Slash)
-            }
-            _ => None,
-        }
-    }
-
-    // Entry point for parsing
-    pub fn parse(&mut self) -> Vec<Expr> {
-        let mut statements = Vec::new();
-
-        while let Some(expr) = self.parse_expression() {
-            statements.push(expr);
-        }
-
-        statements
+        None
     }
 }
