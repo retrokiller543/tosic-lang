@@ -55,7 +55,7 @@ fn main() {
             let tokens = lex_file(&file_contents);
 
             for token in tokens {
-                println!("{}", token);
+                println!("{:?}", token);
             }
         }
         "parse" => {
