@@ -88,7 +88,7 @@ fn main() {
 
             evaluator.evaluate().unwrap_or_else(|err| {
                 eprintln!("{}", err);
-                exit(65);
+                exit(70);
             })
         }
         _ => {
