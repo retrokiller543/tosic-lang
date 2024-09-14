@@ -150,7 +150,7 @@ impl<'a> Display for Token<'a> {
                 } else {
                     write!(f, "{}", trim_trailing_zeroes(n))
                 }
-            },
+            }
             Token::Ident(s) => write!(f, "{}", s),
             Token::Reserved(r) => write!(f, "{}", r),
             Token::EOF => write!(f, "EOF"),
@@ -200,7 +200,7 @@ impl Display for Reserved {
     }
 }
 
-fn trim_trailing_zeroes(s: &str) -> String {
+pub fn trim_trailing_zeroes(s: &str) -> String {
     // s = 42.0000 output = 42.0
     if !s.contains(".") {
         return s.to_string();

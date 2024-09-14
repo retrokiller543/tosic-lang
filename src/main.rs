@@ -67,12 +67,18 @@ fn main() {
                 Vec::new()
             };
 
+            dbg!(&tokens);
+
             let mut parser = parser::Parser::new(tokens);
 
-            parser.parse();
+            let expr = parser.parse();
+
+            for expr in expr {
+                println!("{}", expr.to_string());
+            }
 
             if has_lexer_error {
-                std::process::exit(65);
+                exit(65);
             }
         }
         _ => {
