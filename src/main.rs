@@ -17,7 +17,7 @@ fn read_file(filename: &str) -> String {
     });
 
     if file_contents.is_empty() {
-        exit(1);
+        exit(0);
     }
 
     file_contents
