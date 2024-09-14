@@ -23,16 +23,24 @@ fn read_file(filename: &str) -> String {
     file_contents
 }
 
-fn lex_file(file_contents: &str) -> Vec<token::Token> {
+fn lex_file(file_contents: &str) -> (Vec<token::Token>, bool) {
     let mut lexer = Lexer::new(file_contents);
-    lexer.lex().unwrap_or_else(|_| {
-        exit(65);
-    })
+    let mut has_error = false;
+
+    (lexer.lex().unwrap_or_else(|tokens| {
+        has_error = true;
+        tokens
+    }), has_error)
 }
 
 fn parse_file(filename: &str) -> Vec<(parser::Expr, usize)> {
     let file_contents = read_file(filename);
-    let tokens = lex_file(&file_contents);
+    let (tokens, errors) = lex_file(&file_contents);
+
+    if errors {
+        exit(65);
+    }
+
     parser::Parser::new(tokens).parse().unwrap_or_else(|err| {
         eprintln!("{}", err);
         exit(65);
@@ -52,10 +60,14 @@ fn main() {
     match command.as_str() {
         "tokenize" => {
             let file_contents = read_file(filename);
-            let tokens = lex_file(&file_contents);
+            let (tokens, errors) = lex_file(&file_contents);
 
             for token in tokens {
                 println!("{:?}", token);
+            }
+
+            if errors {
+                exit(65);
             }
         }
         "parse" => {
