@@ -82,7 +82,7 @@ fn read_file(filename: &str) -> Result<String, std::io::Error> {
     let file_contents = fs::read_to_string(filename)?;
 
     if file_contents.trim().is_empty() {
-        println!("EOF null");
+        println!("EOF  null");
         exit(0);
     }
 
