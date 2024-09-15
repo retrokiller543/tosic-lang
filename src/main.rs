@@ -62,8 +62,8 @@ fn parse_statements(filename: &str) {
     let statements = match statements_file(filename) {
         Ok(statements) => statements,
         Err(err) => {
-            eprintln!("Parsing error: {}", err);
-            exit(70);
+            eprintln!("{}", err);
+            exit(65);
         }
     };
 
@@ -72,7 +72,7 @@ fn parse_statements(filename: &str) {
     match evaluator.evaluate(&statements) {
         Ok(_) => (),
         Err(err) => {
-            eprintln!("Evaluation error: {}", err);
+            eprintln!("{}", err);
             exit(70);
         }
     }
