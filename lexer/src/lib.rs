@@ -183,9 +183,8 @@ impl<'a> Lexer<'a> {
                     kind: TokenKind::LitStr(Cow::Owned(s)),
                     line: self.current_line,
                 });
-            } else if c == '\n' {
-                return Err(TokenError::UnterminatedString(self.current_line).into());
             }
+
             s.push(c);
             self.chars.next();
         }
