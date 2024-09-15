@@ -1,30 +1,89 @@
-mod error;
 mod evaluator;
-mod lexer;
-mod parser;
-pub mod token;
-mod value;
 
-use crate::lexer::Lexer;
-use std::env;
+use clap::{Parser, Subcommand};
+use lexer::Lexer;
+use statement::{Expr, Stmt};
 use std::fs;
 use std::process::exit;
+use tokens::Token;
 
-fn read_file(filename: &str) -> String {
-    let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
-        eprintln!("Failed to read file {}", filename);
-        String::new()
-    });
+#[derive(Parser)]
+#[command(author, version, about = "Interpreter for the Lox language")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
 
-    if file_contents.is_empty() {
-        println!("EOF  null");
+#[derive(Subcommand)]
+enum Commands {
+    /// Tokenize the input file
+    #[command(about = "Tokenize the input file", alias = "token")]
+    Tokenize {
+        /// The input file to tokenize
+        filename: String,
+    },
+    /// Parse the input file
+    #[command(about = "Parse the input file")]
+    Parse {
+        /// The input file to parse
+        filename: String,
+    },
+    /// Evaluate the input file
+    #[command(about = "Evaluate expressions the input file", alias = "eval")]
+    Evaluate {
+        /// The input file to evaluate
+        filename: String,
+    },
+    /// Run the input file
+    #[command(about = "Run the input file")]
+    Run { filename: String },
+}
+
+fn main() {
+    let cli = Cli::parse();
+
+    match &cli.command {
+        Commands::Tokenize { filename } => {
+            tokenize_file(filename);
+        }
+        Commands::Parse { filename } => {
+            parse_file_command(filename);
+        }
+        Commands::Evaluate { filename } => {
+            evaluate_file(filename);
+        }
+        Commands::Run { filename } => {
+            parse_statements(filename);
+        }
+    }
+}
+
+fn parse_statements(filename: &String) {
+    let statements = match statements_file(filename) {
+        Ok(statements) => statements,
+        Err(err) => {
+            eprintln!("Parsing error: {}", err);
+            exit(70);
+        }
+    };
+
+    for stmt in statements {
+        println!("{}", stmt);
+    }
+}
+
+fn read_file(filename: &str) -> Result<String, std::io::Error> {
+    let file_contents = fs::read_to_string(filename)?;
+
+    if file_contents.trim().is_empty() {
+        println!("EOF null");
         exit(0);
     }
 
-    file_contents
+    Ok(file_contents)
 }
 
-fn lex_file(file_contents: &str) -> (Vec<token::Token>, bool) {
+fn lex_file(file_contents: &str) -> (Vec<Token>, bool) {
     let mut lexer = Lexer::new(file_contents);
     let mut has_error = false;
 
@@ -37,62 +96,81 @@ fn lex_file(file_contents: &str) -> (Vec<token::Token>, bool) {
     )
 }
 
-fn parse_file(filename: &str) -> Vec<(parser::Expr, usize)> {
-    let file_contents = read_file(filename);
+fn parse_file(filename: &str) -> Result<Vec<(Expr, usize)>, String> {
+    let file_contents = read_file(filename).map_err(|e| e.to_string())?;
+
     let (tokens, errors) = lex_file(&file_contents);
+
+    if errors {
+        return Err("Lexing errors occurred.".to_string());
+    }
+
+    parser::Parser::new(tokens)
+        .parse()
+        .map_err(|err| err.to_string())
+}
+
+fn statements_file(filename: &str) -> Result<Vec<Stmt>, String> {
+    let file_contents = read_file(filename).map_err(|e| e.to_string())?;
+
+    let (tokens, errors) = lex_file(&file_contents);
+
+    if errors {
+        return Err("Lexing errors occurred.".to_string());
+    }
+
+    parser::Parser::new(tokens)
+        .parse_stmts()
+        .map_err(|err| err.to_string())
+}
+
+fn tokenize_file(filename: &str) {
+    let file_contents = match read_file(filename) {
+        Ok(contents) => contents,
+        Err(err) => {
+            eprintln!("Failed to read file {}: {}", filename, err);
+            exit(1);
+        }
+    };
+
+    let (tokens, errors) = lex_file(&file_contents);
+
+    for token in tokens {
+        println!("{:?}", token);
+    }
 
     if errors {
         exit(65);
     }
-
-    parser::Parser::new(tokens).parse().unwrap_or_else(|err| {
-        eprintln!("{}", err);
-        exit(65);
-    })
 }
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
-        eprintln!("Usage: {} tokenize <filename>", args[0]);
-        return;
+fn parse_file_command(filename: &str) {
+    let expressions = match parse_file(filename) {
+        Ok(exprs) => exprs,
+        Err(err) => {
+            eprintln!("Parsing error: {}", err);
+            exit(65);
+        }
+    };
+
+    for (expr, _) in expressions {
+        println!("{}", expr);
     }
+}
 
-    let command = &args[1];
-    let filename = &args[2];
-
-    match command.as_str() {
-        "tokenize" => {
-            let file_contents = read_file(filename);
-            let (tokens, errors) = lex_file(&file_contents);
-
-            for token in tokens {
-                println!("{:?}", token);
-            }
-
-            if errors {
-                exit(65);
-            }
+fn evaluate_file(filename: &str) {
+    let expressions = match parse_file(filename) {
+        Ok(exprs) => exprs,
+        Err(err) => {
+            eprintln!("Parsing error: {}", err);
+            exit(65);
         }
-        "parse" => {
-            let expressions = parse_file(filename);
+    };
 
-            for (expr, _) in expressions {
-                println!("{}", expr);
-            }
-        }
-        "evaluate" => {
-            let expressions = parse_file(filename);
+    let evaluator = evaluator::Evaluator::new(expressions);
 
-            let evaluator = evaluator::Evaluator::new(expressions);
-
-            evaluator.evaluate().unwrap_or_else(|err| {
-                eprintln!("{}", err);
-                exit(70);
-            })
-        }
-        _ => {
-            eprintln!("Unknown command: {}", command);
-        }
+    if let Err(err) = evaluator.evaluate() {
+        eprintln!("Evaluation error: {}", err);
+        exit(70);
     }
 }

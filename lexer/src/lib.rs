@@ -1,10 +1,10 @@
+pub mod error;
+
 use crate::error::TokenError;
-use crate::token::{Reserved, Token, TokenKind};
 use std::borrow::Cow;
+use tokens::{Reserved, Token, TokenKind};
 
 pub struct Lexer<'a> {
-    #[allow(dead_code)]
-    input: &'a str,
     chars: std::iter::Peekable<std::str::Chars<'a>>,
     current_line: usize,
 }
@@ -12,7 +12,6 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
-            input,
             chars: input.chars().peekable(),
             current_line: 1,
         }

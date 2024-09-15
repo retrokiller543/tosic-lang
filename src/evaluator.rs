@@ -1,8 +1,8 @@
-use crate::error::EvalError;
-use crate::parser::Expr;
+use statement::error::EvalError;
+use statement::Expr;
 
 pub struct Evaluator {
-    pub statements: Vec<(Expr, usize)>, // Include line numbers
+    pub statements: Vec<(Expr, usize)>,
 }
 
 impl Evaluator {
