@@ -2,7 +2,6 @@ pub mod error;
 
 use crate::error::ParserError;
 use statement::{Expr, Literal, Operator, Stmt, UnaryOperator};
-use std::fmt::Display;
 use std::iter::Peekable;
 use std::str::FromStr;
 use std::vec::IntoIter;
@@ -38,16 +37,13 @@ impl<'a> Parser<'a> {
             self.tokens.next();
             Ok(())
         } else {
-            let token = self
-                .peek_token()
-                .unwrap_or(&Token {
-                    kind: TokenKind::EOF,
-                    line: 0,
-                })
-                .clone();
+            let token = self.peek_token().cloned().unwrap_or(Token {
+                kind: TokenKind::EOF,
+                line: self.current_line(),
+            });
 
             Err(ParserError::ExpectedToken(
-                self.current_line(),
+                token.line,
                 token.clone(),
                 message,
             ))
@@ -102,16 +98,13 @@ impl<'a> Parser<'a> {
         let name = if let Some(TokenKind::Ident(name)) = self.tokens.next().map(|t| t.kind) {
             name.to_string()
         } else {
-            let token = self
-                .peek_token()
-                .unwrap_or(&Token {
-                    kind: TokenKind::EOF,
-                    line: 0,
-                })
-                .clone();
+            let token = self.peek_token().cloned().unwrap_or(Token {
+                kind: TokenKind::EOF,
+                line: self.current_line(),
+            });
 
             return Err(ParserError::ExpectedToken(
-                self.current_line(),
+                token.line,
                 token.clone(),
                 "variable name",
             ));
@@ -123,17 +116,14 @@ impl<'a> Parser<'a> {
             None
         };
 
-        self.consume(
-            TokenKind::Semicolon,
-            "Expect ';' after variable declaration.",
-        )?;
+        self.consume(TokenKind::Semicolon, "';' after variable declaration.")?;
         Ok(Stmt::Var(name, initializer))
     }
 
     fn parse_if_statement(&mut self) -> Result<Stmt, ParserError<'a>> {
-        self.consume(TokenKind::LeftParen, "Expect '(' after 'if'.")?;
+        self.consume(TokenKind::LeftParen, "'(' after 'if'.")?;
         let condition = self.parse_expression()?;
-        self.consume(TokenKind::RightParen, "Expect ')' after if condition.")?;
+        self.consume(TokenKind::RightParen, "')' after if condition.")?;
 
         let then_branch = Box::new(self.parse_statement()?);
         let else_branch = if self.match_token(TokenKind::Reserved(Reserved::Else)) {
@@ -146,9 +136,9 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_while_statement(&mut self) -> Result<Stmt, ParserError<'a>> {
-        self.consume(TokenKind::LeftParen, "Expect '(' after 'while'.")?;
+        self.consume(TokenKind::LeftParen, "'(' after 'while'.")?;
         let condition = self.parse_expression()?;
-        self.consume(TokenKind::RightParen, "Expect ')' after condition.")?;
+        self.consume(TokenKind::RightParen, "')' after condition.")?;
         let body = Box::new(self.parse_statement()?);
 
         Ok(Stmt::While(condition, body))
@@ -156,7 +146,7 @@ impl<'a> Parser<'a> {
 
     fn parse_print_statement(&mut self) -> Result<Stmt, ParserError<'a>> {
         let value = self.parse_expression()?;
-        self.consume(TokenKind::Semicolon, "Expect ';' after value.")?;
+        self.consume(TokenKind::Semicolon, "';' after value.")?;
         Ok(Stmt::Print(value))
     }
 
@@ -167,35 +157,18 @@ impl<'a> Parser<'a> {
             statements.push(self.parse_declaration()?);
         }
 
-        self.consume(TokenKind::RightBrace, "Expect '}' after block.")?;
+        self.consume(TokenKind::RightBrace, "'}' after block.")?;
         Ok(Stmt::Block(statements))
     }
 
     fn parse_expression_statement(&mut self) -> Result<Stmt, ParserError<'a>> {
         let expr = self.parse_expression()?;
-        self.consume(TokenKind::Semicolon, "Expect ';' after expression.")?;
+        self.consume(TokenKind::Semicolon, "';' after expression.")?;
         Ok(Stmt::Expression(expr))
     }
 
-    // Entry point for parsing
-    pub fn parse(&mut self) -> Result<Vec<(Expr, usize)>, ParserError<'a>> {
-        let mut statements = Vec::new();
-
-        while let Some(token) = self.tokens.peek() {
-            if token.kind == TokenKind::EOF {
-                break;
-            }
-            let line = token.clone().line;
-
-            let expr = self.parse_expression()?;
-
-            statements.push((expr, line));
-        }
-
-        Ok(statements)
-    }
-
-    pub fn parse_stmts(&mut self) -> Result<Vec<Stmt>, ParserError<'a>> {
+    // Entry point for parsing statements
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, ParserError<'a>> {
         let mut statements = Vec::new();
 
         while let Some(token) = self.tokens.peek() {
@@ -209,8 +182,56 @@ impl<'a> Parser<'a> {
         Ok(statements)
     }
 
+    // Parses a single expression, useful for REPL or evaluating expressions directly
+    pub fn parse_single_expression(&mut self) -> Result<Expr, ParserError<'a>> {
+        let expr = self.parse_expression()?;
+        if !self.at_end() {
+            let next_token = self.tokens.next().unwrap();
+            return Err(ParserError::UnexpectedToken(
+                next_token.line,
+                next_token,
+                "Expected end of input after expression",
+            ));
+        }
+        Ok(expr)
+    }
+
+    pub fn parse_expressions(&mut self) -> Result<Vec<(Expr, usize)>, ParserError<'a>> {
+        let mut expressions = Vec::new();
+
+        while let Some(token) = self.tokens.peek() {
+            if token.kind == TokenKind::EOF {
+                break;
+            }
+            let expr = self.parse_expression()?;
+            expressions.push((expr, self.current_line()));
+        }
+
+        Ok(expressions)
+    }
+
     fn parse_expression(&mut self) -> Result<Expr, ParserError<'a>> {
-        self.parse_equality()
+        self.parse_assignment()
+    }
+
+    fn parse_assignment(&mut self) -> Result<Expr, ParserError<'a>> {
+        let expr = self.parse_equality()?;
+
+        if self.match_token(TokenKind::Equal) {
+            let equals_token = self.peek_token().unwrap().clone();
+            let value = self.parse_assignment()?;
+
+            if let Expr::Variable(name) = expr {
+                Ok(Expr::Assign(name, Box::new(value)))
+            } else {
+                Err(ParserError::InvalidAssignmentTarget(
+                    equals_token.line,
+                    equals_token,
+                ))
+            }
+        } else {
+            Ok(expr)
+        }
     }
 
     // Parses equality expressions (handles == and !=)
@@ -333,21 +354,14 @@ impl<'a> Parser<'a> {
                 TokenKind::Ident(name) => Ok(Expr::Variable(name.to_string())),
                 TokenKind::LeftParen => {
                     let expr = self.parse_expression()?;
-                    if let Some(next_token) = self.tokens.next() {
-                        if let TokenKind::RightParen = next_token.kind {
-                            Ok(Expr::Group(Box::new(expr)))
-                        } else {
-                            Err(ParserError::ExpectedToken(token.line, next_token, "')'"))
-                        }
-                    } else {
-                        Err(ParserError::UnexpectedEOF(token.line))
-                    }
+                    self.consume(TokenKind::RightParen, "Expect ')' after expression.")?;
+                    Ok(Expr::Group(Box::new(expr)))
                 }
                 TokenKind::EOF => Err(ParserError::UnexpectedEOF(token.line)),
                 _ => Err(ParserError::ExpectedExpression(token.line, token)),
             }
         } else {
-            Err(ParserError::UnexpectedEOF(0))
+            Err(ParserError::UnexpectedEOF(self.current_line()))
         }
     }
 
@@ -380,7 +394,7 @@ impl<'a> Parser<'a> {
                 ))
             }
         } else {
-            Err(ParserError::UnexpectedEOF(0))
+            Err(ParserError::UnexpectedEOF(self.current_line()))
         }
     }
 }

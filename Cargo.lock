@@ -117,6 +117,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "clap",
+ "evaluator",
  "lexer",
  "parser",
  "statement",
@@ -138,6 +139,13 @@ checksum = "534c5cf6194dfab3db3242765c03bbe257cf92f22b38f6bc0c58d59108a820ba"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "evaluator"
+version = "0.1.0"
+dependencies = [
+ "statement",
 ]
 
 [[package]]

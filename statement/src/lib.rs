@@ -1,9 +1,11 @@
 use crate::error::EvalError;
+use crate::traits::{EvalResult, ExprVisitor, StmtVisitor};
 use crate::value::Value;
 use std::fmt::Display;
 use tokens::trim_trailing_zeroes;
 
 pub mod error;
+pub mod traits;
 pub mod value;
 
 #[derive(Debug)]
@@ -13,100 +15,18 @@ pub enum Expr {
     UnaryOp(UnaryOperator, Box<Expr>),
     BinaryOp(Box<Expr>, Operator, Box<Expr>),
     Group(Box<Expr>),
+    Assign(String, Box<Expr>),
 }
 
 impl Expr {
-    pub fn evaluate(&self, line: usize) -> Result<Value, EvalError> {
+    pub fn accept<T>(&self, visitor: &mut impl ExprVisitor<T>) -> EvalResult<T> {
         match self {
-            Expr::Literal(literal) => match literal {
-                Literal::Number(n) => Ok(Value::Number(*n)),
-                Literal::String(s) => Ok(Value::String(s.clone())),
-                Literal::True => Ok(Value::Boolean(true)),
-                Literal::False => Ok(Value::Boolean(false)),
-                Literal::Nil => Ok(Value::Nil),
-            },
-            Expr::Variable(name) => {
-                // Variable handling is not implemented yet
-                Err(EvalError::UndefinedVariable {
-                    name: name.clone(),
-                    line,
-                })
-            }
-            Expr::UnaryOp(op, expr) => {
-                let value = expr.evaluate(line)?;
-                match (op, value) {
-                    (UnaryOperator::Negate, Value::Number(n)) => Ok(Value::Number(-n)),
-                    (UnaryOperator::Not, Value::Boolean(b)) => Ok(Value::Boolean(!b)),
-                    (UnaryOperator::Not, Value::Nil) => Ok(Value::Boolean(true)),
-                    (UnaryOperator::Not, _) => Ok(Value::Boolean(false)),
-                    (UnaryOperator::Negate, _) => Err(EvalError::TypeError {
-                        message: "Operand must be a number.".to_string(),
-                        line,
-                    }),
-                }
-            }
-            Expr::BinaryOp(left, op, right) => {
-                let left_value = left.evaluate(line)?;
-                let right_value = right.evaluate(line)?;
-                match (op, left_value, right_value) {
-                    // Arithmetic operations
-                    (Operator::Plus, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Number(l + r))
-                    }
-                    (Operator::Minus, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Number(l - r))
-                    }
-                    (Operator::Star, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Number(l * r))
-                    }
-                    (Operator::Slash, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Number(l / r))
-                    }
-                    // String concatenation
-                    (Operator::Plus, Value::String(l), Value::String(r)) => {
-                        Ok(Value::String(l + &r))
-                    }
-                    // Comparison operators
-                    (Operator::Greater, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Boolean(l > r))
-                    }
-                    (Operator::GreaterEqual, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Boolean(l >= r))
-                    }
-                    (Operator::Less, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Boolean(l < r))
-                    }
-                    (Operator::LessEqual, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Boolean(l <= r))
-                    }
-                    // Equality operators
-                    (Operator::Equal, l, r) => Ok(Value::Boolean(l == r)),
-                    (Operator::NotEqual, l, r) => Ok(Value::Boolean(l != r)),
-                    // Type errors
-                    (Operator::Plus, _, _) => Err(EvalError::TypeError {
-                        message: "Operands must be two numbers or two strings.".to_string(),
-                        line,
-                    }),
-                    (Operator::Minus | Operator::Star | Operator::Slash, _, _) => {
-                        Err(EvalError::TypeError {
-                            message: "Operands must be numbers.".to_string(),
-                            line,
-                        })
-                    }
-                    (
-                        Operator::Greater
-                        | Operator::GreaterEqual
-                        | Operator::Less
-                        | Operator::LessEqual,
-                        _,
-                        _,
-                    ) => Err(EvalError::TypeError {
-                        message: "Operands must be numbers.".to_string(),
-                        line,
-                    }),
-                }
-            }
-            Expr::Group(expr) => expr.evaluate(line),
+            Expr::Literal(literal) => visitor.visit_literal_expr(literal),
+            Expr::Variable(name) => visitor.visit_variable_expr(name),
+            Expr::UnaryOp(op, expr) => visitor.visit_unary_expr(op, expr),
+            Expr::BinaryOp(left, op, right) => visitor.visit_binary_expr(left, op, right),
+            Expr::Group(expr) => visitor.visit_grouping_expr(expr),
+            Expr::Assign(name, value) => visitor.visit_assign_expr(name, value),
         }
     }
 }
@@ -119,6 +39,7 @@ impl Display for Expr {
             Expr::UnaryOp(op, e) => write!(f, "({} {})", op, e),
             Expr::BinaryOp(l, op, r) => write!(f, "({} {} {})", op, l, r),
             Expr::Group(e) => write!(f, "(group {})", e),
+            Expr::Assign(name, value) => write!(f, "({} = {})", name, value),
         }
     }
 }
@@ -131,6 +52,21 @@ pub enum Stmt {
     Block(Vec<Stmt>),
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
     While(Expr, Box<Stmt>),
+}
+
+impl Stmt {
+    pub fn accept<T>(&self, visitor: &mut impl StmtVisitor<T>) -> EvalResult<T> {
+        match self {
+            Stmt::Expression(expr) => visitor.visit_expression_stmt(expr),
+            Stmt::Print(expr) => visitor.visit_print_stmt(expr),
+            Stmt::Var(name, initializer) => visitor.visit_var_stmt(name, initializer),
+            Stmt::Block(statements) => visitor.visit_block_stmt(statements),
+            Stmt::If(condition, then_branch, else_branch) => {
+                visitor.visit_if_stmt(condition, then_branch, else_branch)
+            }
+            Stmt::While(condition, body) => visitor.visit_while_stmt(condition, body),
+        }
+    }
 }
 
 impl Display for Stmt {

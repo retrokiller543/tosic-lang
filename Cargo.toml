@@ -1,5 +1,5 @@
 [workspace]
-members = ['.', "lexer", "parser", "statement", 'tokens']
+members = ['.', "evaluator", "lexer", "parser", "statement", 'tokens']
 
 [workspace.dependencies]
 anyhow = "1.0.68"
@@ -9,6 +9,7 @@ tokens = { path = "tokens" }
 lexer = { path = "lexer" }
 parser = { path = "parser" }
 statement = { path = "statement" }
+evaluator = { path = "evaluator" }
 
 [package]
 name = "codecrafters-interpreter"
@@ -26,3 +27,4 @@ tokens = { workspace = true }
 lexer = { workspace = true }
 parser = { workspace = true }
 statement = { workspace = true }
+evaluator = { workspace = true }

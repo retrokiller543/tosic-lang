@@ -1,4 +1,4 @@
-mod evaluator;
+mod test;
 
 use clap::{Parser, Subcommand};
 use lexer::Lexer;
@@ -58,7 +58,7 @@ fn main() {
     }
 }
 
-fn parse_statements(filename: &String) {
+fn parse_statements(filename: &str) {
     let statements = match statements_file(filename) {
         Ok(statements) => statements,
         Err(err) => {
@@ -67,8 +67,14 @@ fn parse_statements(filename: &String) {
         }
     };
 
-    for stmt in statements {
-        println!("{}", stmt);
+    let mut evaluator = evaluator::Evaluator::new();
+
+    match evaluator.evaluate(&statements) {
+        Ok(_) => (),
+        Err(err) => {
+            eprintln!("Evaluation error: {}", err);
+            exit(70);
+        }
     }
 }
 
@@ -106,7 +112,7 @@ fn parse_file(filename: &str) -> Result<Vec<(Expr, usize)>, String> {
     }
 
     parser::Parser::new(tokens)
-        .parse()
+        .parse_expressions()
         .map_err(|err| err.to_string())
 }
 
@@ -120,7 +126,7 @@ fn statements_file(filename: &str) -> Result<Vec<Stmt>, String> {
     }
 
     parser::Parser::new(tokens)
-        .parse_stmts()
+        .parse()
         .map_err(|err| err.to_string())
 }
 
@@ -167,10 +173,15 @@ fn evaluate_file(filename: &str) {
         }
     };
 
-    let evaluator = evaluator::Evaluator::new(expressions);
+    let mut evaluator = evaluator::Evaluator::new();
 
-    if let Err(err) = evaluator.evaluate() {
-        eprintln!("Evaluation error: {}", err);
-        exit(70);
+    for (expr, _) in expressions {
+        match evaluator.evaluate_expr(&expr) {
+            Ok(value) => println!("{}", value),
+            Err(err) => {
+                eprintln!("Evaluation error: {}", err);
+                exit(70);
+            }
+        }
     }
 }
