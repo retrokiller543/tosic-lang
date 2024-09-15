@@ -1,6 +1,5 @@
 #![cfg(test)]
 
-use super::*;
 use evaluator::{Evaluator, Output};
 use lexer::Lexer;
 use parser::Parser;
