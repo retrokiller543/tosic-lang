@@ -80,14 +80,6 @@ impl ExprVisitor<Value> for Evaluator {
         self.environment.borrow().get(name)
     }
 
-    fn visit_assign_expr(&mut self, name: &String, value: &Expr) -> EvalResult<Value> {
-        let evaluated_value = value.accept(self)?;
-        self.environment
-            .borrow_mut()
-            .assign(name, evaluated_value.clone())?;
-        Ok(evaluated_value)
-    }
-
     fn visit_unary_expr(&mut self, op: &UnaryOperator, expr: &Expr) -> EvalResult<Value> {
         let right = expr.accept(self)?;
         match (op, right) {
@@ -146,6 +138,14 @@ impl ExprVisitor<Value> for Evaluator {
 
     fn visit_grouping_expr(&mut self, expr: &Expr) -> EvalResult<Value> {
         expr.accept(self)
+    }
+
+    fn visit_assign_expr(&mut self, name: &String, value: &Expr) -> EvalResult<Value> {
+        let evaluated_value = value.accept(self)?;
+        self.environment
+            .borrow_mut()
+            .assign(name, evaluated_value.clone())?;
+        Ok(evaluated_value)
     }
 }
 
